@@ -14,7 +14,13 @@ on:
         default: testpypi
 
 jobs:
+  # Tag pushes do not match test.yml's `branches: [main]` filter, so without
+  # this the release ref would be published with nothing verified on it.
+  verify:
+    uses: ./.github/workflows/test.yml
+
   publish-mcp:
+    needs: verify
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: release
@@ -22,30 +28,48 @@ jobs:
       # Trusted publishing (OIDC). No long-lived token lives in this repo.
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+
+      # The tag is the only thing a human types at release time, and nothing
+      # else ties it to what actually gets uploaded: tagging v0.2.0 without
+      # bumping the manifest would publish 0.1.0 under a v0.2.0 release.
+      - name: Tag matches the packaged version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          packaged=$(grep -m1 '^version = ' mcp/pyproject.toml | cut -d'"' -f2)
+          if [ "$tag" != "$packaged" ]; then
+            echo "::error::tag $GITHUB_REF_NAME implies $tag, but mcp/pyproject.toml declares $packaged"
+            exit 1
+          fi
+          echo "tag $GITHUB_REF_NAME matches packaged version $packaged"
 
       - run: uv build
         working-directory: mcp
 
+      # --check-url makes a re-run idempotent. Without it, re-running a release
+      # (or a dispatch at an already-published version) fails with a 400 rather
+      # than skipping the files that are already there.
       - name: Publish to TestPyPI
         if: inputs.repository == 'testpypi'
-        run: uv publish --publish-url https://test.pypi.org/legacy/
+        run: uv publish --publish-url https://test.pypi.org/legacy/ --check-url https://test.pypi.org/simple/
         working-directory: mcp
 
       - name: Publish to PyPI
         if: inputs.repository != 'testpypi'
-        run: uv publish
+        run: uv publish --check-url https://pypi.org/simple/
         working-directory: mcp
 
   publish-skill:
+    needs: verify
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     environment: release
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Need tag history to diff skill/ against the previous release.
           fetch-depth: 0
@@ -62,7 +86,7 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.diff.outputs.changed == 'true'
         with:
           node-version: "22"
