@@ -1,0 +1,41 @@
+Network Working Group                                        A. Author
+Request for Comments: 9999                                    Example Org
+Category: Informational                                      August 2026
+
+
+                        A Paginated Example Document
+
+Status of This Memo
+
+   This synthetic document reproduces the page furniture of an RFC
+   produced before RFC 8650: a footer, a form feed, and a running
+   header at the top of each new page.
+
+Table of Contents
+
+   1. Introduction ...................................................1
+   1.1 Purpose ......................................................1
+   2. Body .........................................................2
+
+1 Introduction
+
+   Introductory prose sits here at the usual three-space indent.
+
+1.1 Purpose
+
+   Purpose prose. The heading above is a subsection and must nest
+   underneath section 1 rather than ending it.
+
+Author, et al.               Informational                      [Page 1]
+
+
+RFC 9999                A Paginated Example                  August 2026
+
+
+2 Body
+
+   Body prose that begins on the second page. A reader asking for
+   section 1 must not receive any of this.
+
+Author, et al.               Informational                      [Page 2]
+

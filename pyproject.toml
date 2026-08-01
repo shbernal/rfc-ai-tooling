@@ -1,6 +1,12 @@
 # Development tooling only. The core is a single stdlib-only file, not a
 # package; the distributable package lives in mcp/pyproject.toml.
 
+[project]
+name = "rfc-ai-tooling-dev"
+version = "0.0.0"
+description = "Development environment for rfc-ai-tooling (not published)"
+requires-python = ">=3.10"
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100

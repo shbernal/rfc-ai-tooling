@@ -1,0 +1,31 @@
+Internet Engineering Task Force (IETF)                       A. Author
+Request for Comments: 9998                                  Example Org
+Category: Standards Track                                   August 2026
+ISSN: 2070-1721
+
+
+                        A Modern Example Document
+
+Abstract
+
+   This synthetic document reproduces the shape of an RFC generated
+   from XML after RFC 8650: no form feeds, no page footers, and
+   headings whose numbers carry a trailing period.
+
+Table of Contents
+
+   1.  Introduction
+   1.1.  Purpose
+   2.  Body
+
+1.  Introduction
+
+   Introductory prose.
+
+1.1.  Purpose
+
+   Purpose prose, nested under section 1.
+
+2.  Body
+
+   Body prose. Asking for section 1 must stop before this line.
