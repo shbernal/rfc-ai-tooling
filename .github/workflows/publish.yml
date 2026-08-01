@@ -3,6 +3,8 @@ name: publish
 on:
   push:
     tags: ["v*"]
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       repository:
@@ -12,7 +14,8 @@ on:
         default: testpypi
 
 jobs:
-  publish:
+  publish-mcp:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -34,3 +37,56 @@ jobs:
         if: inputs.repository != 'testpypi'
         run: uv publish
         working-directory: mcp
+
+  publish-skill:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need tag history to diff skill/ against the previous release.
+          fetch-depth: 0
+
+      - name: Check whether the skill changed since the last release
+        id: diff
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          prev_tag=$(git tag --sort=-creatordate | grep -vFx "$RELEASE_TAG" | head -1)
+          if [ -z "$prev_tag" ] || ! git diff --quiet "$prev_tag" HEAD -- skill/; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.diff.outputs.changed == 'true'
+        with:
+          node-version: "22"
+
+      # Pinned; clawhub has no OIDC trusted-publishing path, so auth is a
+      # long-lived token (CLAWHUB_TOKEN) rather than id-token: write.
+      - name: Install clawhub
+        if: steps.diff.outputs.changed == 'true'
+        run: npm install -g clawhub@0.23.1
+
+      - name: Authenticate to ClawHub
+        if: steps.diff.outputs.changed == 'true'
+        run: clawhub auth login --token "${{ secrets.CLAWHUB_TOKEN }}" --no-browser
+
+      - name: Publish skill to ClawHub
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          clawhub skill publish skill \
+            --slug rfc-lookup \
+            --version "${RELEASE_TAG#v}" \
+            --name "RFC lookup" \
+            --source-repo "${{ github.repository }}" \
+            --source-commit "${{ github.sha }}" \
+            --source-path skill \
+            --changelog "${{ github.event.release.html_url }}"
