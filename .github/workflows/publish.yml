@@ -1,0 +1,36 @@
+name: publish
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "Package index to publish to"
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      # Trusted publishing (OIDC). No long-lived token lives in this repo.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      - run: uv build
+        working-directory: mcp
+
+      - name: Publish to TestPyPI
+        if: inputs.repository == 'testpypi'
+        run: uv publish --publish-url https://test.pypi.org/legacy/
+        working-directory: mcp
+
+      - name: Publish to PyPI
+        if: inputs.repository != 'testpypi'
+        run: uv publish
+        working-directory: mcp

@@ -1,0 +1,25 @@
+name: upstream
+
+# Upstream format drift is the main external risk to this project, and it would
+# otherwise reach us as a user bug report. Kept out of PR CI because it hits the
+# live RFC Editor and must not make an unrelated pull request red.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Index and documents still parse
+        run: uv run --with pytest --no-project pytest -q -m network
+
+      - name: rsync module is still named rfcs-text-only
+        run: |
+          sudo apt-get update && sudo apt-get install -y rsync
+          rsync --list-only rsync.rfc-editor.org::rfcs-text-only/rfc-index.txt
