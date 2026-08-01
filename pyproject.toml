@@ -26,4 +26,8 @@ addopts = "-m 'not network'"
 dev = [
     "pytest>=8.0",
     "ruff>=0.9",
+    # Not needed to run the tests, but without it `import mcp` from the repo
+    # root resolves to the mcp/ directory as an empty namespace package
+    # instead of failing. Installing the real SDK keeps that name honest.
+    "mcp>=2.0.0",
 ]
