@@ -68,6 +68,11 @@ jobs:
     environment: release
     permissions:
       contents: read
+    env:
+      SKILL_SLUG: rfc-lookup
+      # `inspect` needs a fully-qualified skill; `publish` resolves the owner
+      # from the token, which is why the handle appears here and not below.
+      SKILL_REF: "@shbernal/rfc-lookup"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -101,13 +106,33 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         run: clawhub auth login --token "${{ secrets.CLAWHUB_TOKEN }}" --no-browser
 
-      - name: Publish skill to ClawHub
+      # ClawHub refuses to re-publish an existing version and exits non-zero, so
+      # without this the whole workflow fails whenever the version is already up
+      # — a re-run of a release, or a skill published by hand before the tag.
+      # This is the ClawHub-side equivalent of the `--check-url` that makes the
+      # PyPI half idempotent. `inspect` exits 0 when the version exists and 1
+      # when it does not.
+      - name: Check whether this version is already published
+        id: existing
         if: steps.diff.outputs.changed == 'true'
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
+          version="${RELEASE_TAG#v}"
+          if clawhub inspect "$SKILL_REF" --version "$version" >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$SKILL_REF@$version is already published; skipping"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish skill to ClawHub
+        if: steps.diff.outputs.changed == 'true' && steps.existing.outputs.published == 'false'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
           clawhub skill publish skill \
-            --slug rfc-lookup \
+            --slug "$SKILL_SLUG" \
             --version "${RELEASE_TAG#v}" \
             --name "RFC lookup" \
             --source-repo "${{ github.repository }}" \
