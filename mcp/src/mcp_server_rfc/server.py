@@ -71,7 +71,10 @@ def _fail(message: str) -> dict:
         "Search RFCs. scope='title' matches all query terms against RFC titles and "
         "always works. scope='fulltext' searches the text of every RFC but needs a "
         "local mirror the user has synced; it returns an error explaining what to run "
-        "if there is none. Results carry each RFC's status and obsolescence."
+        "if there is none. Results carry each RFC's status and obsolescence. "
+        "'count' is how many results this page holds and 'total' is how many matched; "
+        "when 'truncated' is true, report 'total' and raise 'limit' rather than counting "
+        "the results you were given."
     ),
 )
 def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
@@ -89,19 +92,28 @@ def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
                     "different question, so this is an error rather than a fallback. "
                     "Retry with scope='title' if a title search is what you want."
                 )
-            results, _ = rfc.search_fulltext(mirror, query, limit)
+            results, _, total = rfc.search_fulltext(mirror, query, limit)
             records = rfc.load_index(mirror, offline_only=True)
             for result in results:
                 record = records.get(result["number"])
                 result["header"] = record.header() if record else f"RFC {result['number']}"
                 result["title"] = record.title if record else ""
-            return {"query": query, "scope": scope, "count": len(results), "results": results}
+            return {
+                "query": query,
+                "scope": scope,
+                "count": len(results),
+                "total": total,
+                "truncated": total > len(results),
+                "results": results,
+            }
 
-        hits = rfc.search_titles(_index_records(), query, limit)
+        hits, total = rfc.search_titles(_index_records(), query, limit)
         return {
             "query": query,
             "scope": scope,
             "count": len(hits),
+            "total": total,
+            "truncated": total > len(hits),
             "fulltext_available": rfc.is_populated(mirror),
             "results": [r.to_dict() for r in hits],
         }

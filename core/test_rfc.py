@@ -256,17 +256,18 @@ def test_default_mirror_is_not_a_cache_directory(monkeypatch):
 
 
 def test_title_search_requires_all_terms(records):
-    hits = rfc.search_titles(records, "internet protocol", limit=10)
+    hits, _ = rfc.search_titles(records, "internet protocol", limit=10)
     assert 791 in [r.number for r in hits]
     assert 1014 not in [r.number for r in hits]
 
 
 def test_title_search_is_case_insensitive(records):
-    assert rfc.search_titles(records, "HYPERTEXT", limit=10)[0].number == 2616
+    hits, _ = rfc.search_titles(records, "HYPERTEXT", limit=10)
+    assert hits[0].number == 2616
 
 
 def test_title_search_supports_regex(records):
-    hits = rfc.search_titles(records, r"HTTP/\d\.\d", limit=10, use_regex=True)
+    hits, _ = rfc.search_titles(records, r"HTTP/\d\.\d", limit=10, use_regex=True)
     assert [r.number for r in hits] == [2616]
 
 
@@ -276,11 +277,40 @@ def test_bad_regex_is_a_clean_error(records):
 
 
 def test_title_search_skips_not_issued_entries(records):
-    assert all(not r.not_issued for r in rfc.search_titles(records, "", limit=100))
+    hits, _ = rfc.search_titles(records, "", limit=100)
+    assert all(not r.not_issued for r in hits)
 
 
 def test_limit_is_honoured(records):
-    assert len(rfc.search_titles(records, "", limit=2)) == 2
+    hits, _ = rfc.search_titles(records, "", limit=2)
+    assert len(hits) == 2
+
+
+def test_a_truncated_page_still_reports_the_real_total(records):
+    """The page size is not the answer.
+
+    Reporting len(results) as the count turns "795 RFCs mention stateless"
+    into "20 RFCs mention stateless" — a confident answer to a question
+    nobody asked, which is the failure the --fulltext refusal exists to avoid.
+    """
+    everything, total = rfc.search_titles(records, "", limit=1000)
+    page, page_total = rfc.search_titles(records, "", limit=2)
+    assert total == len(everything)
+    assert total > 2, "fixture too small to truncate; the assertion below is vacuous"
+    assert len(page) == 2
+    assert page_total == total
+
+
+def test_truncation_is_stated_in_the_human_output(records, monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("RFC_MIRROR", str(tmp_path))
+    monkeypatch.setattr(rfc, "load_index", lambda *a, **k: records)
+    _, total = rfc.search_titles(records, "", limit=1000)
+
+    assert rfc.main(["search", "", "--limit", "2"]) == 0
+    assert f"showing 2 of {total}" in capsys.readouterr().out
+
+    assert rfc.main(["search", "", "--limit", "1000"]) == 0
+    assert "showing" not in capsys.readouterr().out
 
 
 def test_fulltext_without_a_mirror_errors_rather_than_degrading(tmp_path, monkeypatch, capsys):

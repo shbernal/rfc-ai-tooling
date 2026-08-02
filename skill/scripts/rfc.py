@@ -519,7 +519,14 @@ def _collapse_blank_runs(lines: list[str]) -> str:
 
 def search_titles(
     records: dict[int, Record], query: str, limit: int, use_regex: bool = False
-) -> list[Record]:
+) -> tuple[list[Record], int]:
+    """Return one page of matches and how many matched in total.
+
+    The total is not decoration. A caller that only sees the page reports the
+    page size as the answer — "20 RFCs mention stateless" when 795 do — which
+    is the same failure as falling back to a title search: a confident answer
+    to a question nobody asked.
+    """
     if use_regex:
         try:
             pattern = re.compile(query, re.IGNORECASE)
@@ -536,7 +543,7 @@ def search_titles(
             return all(term in lowered for term in terms)
 
     hits = [r for _, r in sorted(records.items()) if not r.not_issued and matches(r.title)]
-    return hits[:limit]
+    return hits[:limit], len(hits)
 
 
 def _search_tool() -> tuple[str, bool]:
@@ -550,11 +557,14 @@ def _search_tool() -> tuple[str, bool]:
 
 def search_fulltext(
     mirror: Path, query: str, limit: int, max_lines_per_doc: int = 3
-) -> tuple[list[dict], str]:
+) -> tuple[list[dict], str, int]:
     """Rank documents by hit count, then pull a few matching lines from each.
 
     Two passes so that ranking reflects real hit counts: capping matches per
     file in a single pass would flatten every document to the same score.
+
+    Returns the page, the backend that produced it, and the total number of
+    matching documents — see search_titles on why the total is not optional.
     """
     tool, is_rg = _search_tool()
     if is_rg:
@@ -615,7 +625,7 @@ def search_fulltext(
                 continue
             matches.append({"line": int(lineno), "text": body.strip()})
         results.append({"number": number, "hits": hits, "matches": matches})
-    return results, tool
+    return results, tool, len(counts)
 
 
 def _run_search(cmd: list[str]) -> list[str]:
@@ -779,6 +789,17 @@ def cmd_meta(args: argparse.Namespace) -> int:
     return 0
 
 
+def _truncation_note(shown: int, total: int) -> str:
+    """Say so when a page is not the whole answer.
+
+    Silence here reads as completeness: `--limit` defaults to 20, and a reader
+    who is not told otherwise will report 20 as the count.
+    """
+    if total <= shown:
+        return ""
+    return f"\n\n(showing {shown} of {total} — raise --limit for more)"
+
+
 def cmd_search(args: argparse.Namespace) -> int:
     mirror = resolve_mirror(args.mirror)
     populated = is_populated(mirror)
@@ -793,7 +814,7 @@ def cmd_search(args: argparse.Namespace) -> int:
         )
 
     if args.fulltext:
-        results, tool = search_fulltext(mirror, args.query, args.limit)
+        results, tool, total = search_fulltext(mirror, args.query, args.limit)
         records = load_index(mirror, offline_only=True)
         enriched = []
         human = []
@@ -812,21 +833,28 @@ def cmd_search(args: argparse.Namespace) -> int:
             "scope": "fulltext",
             "tool": tool,
             "count": len(enriched),
+            "total": total,
+            "truncated": total > len(enriched),
             "results": enriched,
         }
-        _emit(payload, "\n".join(human).strip() or "no matches", args.json)
+        text = "\n".join(human).strip() or "no matches"
+        text += _truncation_note(len(enriched), total)
+        _emit(payload, text, args.json)
         return 0
 
     records = load_index(mirror)
-    hits = search_titles(records, args.query, args.limit, args.regex)
+    hits, total = search_titles(records, args.query, args.limit, args.regex)
     payload = {
         "query": args.query,
         "scope": "title",
         "count": len(hits),
+        "total": total,
+        "truncated": total > len(hits),
         "results": [r.to_dict() for r in hits],
     }
     if hits:
         human = "\n".join(r.header() for r in hits)
+        human += _truncation_note(len(hits), total)
         if not populated:
             human += "\n\n(titles only — `rfc sync` enables full-text search)"
     else:

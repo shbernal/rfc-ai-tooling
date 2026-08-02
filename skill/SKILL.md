@@ -60,7 +60,14 @@ python3 scripts/rfc.py search "must-revalidate" --fulltext
 
 If there is no mirror, `--fulltext` fails with a message rather than falling back
 to titles — a title search silently standing in for a full-text search answers a
-different question than the one asked. `status` says which mode you are in:
+different question than the one asked.
+
+Both scopes return at most `--limit` results (default 20). When more matched, the
+output ends with `(showing 20 of 795 — raise --limit for more)`, and `--json`
+carries `total` and `truncated`. **Report the total, never the number of rows you
+were handed** — a truncated page counted as the answer is off by whatever was cut.
+
+`status` says which mode you are in:
 
 ```bash
 python3 scripts/rfc.py status
