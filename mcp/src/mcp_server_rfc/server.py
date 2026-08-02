@@ -87,8 +87,10 @@ def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
             if not rfc.is_populated(mirror):
                 return _fail(
                     "Full-text search needs a local RFC mirror, which is not present. "
-                    "The user can create one by running `rfc sync` in a shell "
-                    "(512 MB, a few minutes). Searching titles instead would answer a "
+                    "The user can create one by running "
+                    f"`{rfc.invocation()} sync` in a shell, in the environment this "
+                    "server is installed in (512 MB, a few minutes). Searching "
+                    "titles instead would answer a "
                     "different question, so this is an error rather than a fallback. "
                     "Retry with scope='title' if a title search is what you want."
                 )
@@ -152,7 +154,10 @@ def list_sections(number: int) -> dict:
         "Read an RFC. Call list_sections first and pass a section — whole RFCs average "
         "53 KB and run past 1.6 MB, and reading one in full is almost never what the "
         "question needs. section accepts a number ('9.3.1') or heading text "
-        "('Idempotent Methods') and includes that section's subsections. start_line and "
+        "('Idempotent Methods') and includes that section's subsections. Asking for a "
+        "long RFC with no section and no line range is an error naming its size, not a "
+        "silent context-filling dump; pass full=true only when the entire text is "
+        "genuinely what you need. start_line and "
         "max_lines are the fallback for RFCs without numbered headings. Page headers "
         "and footers are stripped. The response carries a banner naming the RFC's "
         "status and, if it has been superseded, what replaced it."
@@ -163,6 +168,7 @@ def get_rfc(
     section: str | None = None,
     start_line: int | None = None,
     max_lines: int | None = None,
+    full: bool = False,
 ) -> dict:
     mirror = _mirror()
     try:
@@ -175,6 +181,13 @@ def get_rfc(
             sections = rfc.find_sections(lines)
             start, end, section_info = rfc.section_range(sections, section, len(lines))
         else:
+            if not (full or start_line or max_lines):
+                rfc.check_whole_document(
+                    number,
+                    len(lines),
+                    list_hint=f"list_sections({number})",
+                    override_hint="full=true",
+                )
             start = start_line or 1
             end = start + max_lines - 1 if max_lines else len(lines)
 

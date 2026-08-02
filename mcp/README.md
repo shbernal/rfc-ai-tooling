@@ -23,6 +23,10 @@ No clone, no virtualenv, no path. That is the whole installation.
 | `list_sections` | An RFC's headings with line numbers — the cheap first call |
 | `get_rfc` | Read one section, or a line range |
 
+`get_rfc` refuses an unscoped read of an RFC over 1500 lines, answering with its
+size and a pointer to `list_sections` rather than filling the context with a
+specification the model had one question about. `full=true` overrides it.
+
 Every response carries a banner with the RFC's status and, when it applies, a
 warning that it has been superseded:
 

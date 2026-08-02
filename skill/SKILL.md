@@ -23,6 +23,23 @@ It works immediately, fetching documents over HTTPS as needed. If a local mirror
 has been synced it reads from disk instead and can search the full text of every
 RFC. Same commands either way.
 
+## The loop
+
+Four steps, and skipping the middle two is how a wrong or oversized answer
+happens:
+
+```bash
+python3 scripts/rfc.py search "http caching"     # find it            → RFC 9111
+python3 scripts/rfc.py meta 9111                 # is it still current?
+python3 scripts/rfc.py sections 9111             # where does it say that?
+python3 scripts/rfc.py get 9111 --section 5.2    # read only that
+```
+
+Then quote the text verbatim and cite the section — `RFC 9111 §5.2` — so the
+claim can be checked. Normative words carry weight (MUST is not SHOULD, and
+neither is "recommended"), so quote them rather than paraphrasing; section
+numbers come straight from `sections`, so a citation is always verifiable.
+
 ## Check obsolescence before citing anything
 
 This is the rule, not a suggestion. RFCs are superseded constantly and the
@@ -73,6 +90,25 @@ were handed** — a truncated page counted as the answer is off by whatever was 
 python3 scripts/rfc.py status
 ```
 
+### When search finds nothing
+
+Without a mirror, the only search is over titles, and it requires *every* term
+to appear there. `search "cache control header"` returns nothing, because no RFC
+is titled that. Empty output means the query was too specific, not that the RFC
+does not exist.
+
+Cut back to the one word that would plausibly be in a title — `search "caching"`,
+`search "transport layer security"` — and widen from there. Or go the other way:
+if you already believe the number, skip search entirely and confirm it with
+`meta`, which is the honest use of what you know.
+
+```bash
+python3 scripts/rfc.py meta 9111        # "HTTP Caching" — right, and current
+```
+
+Never cite a number you have not put through `meta`. Recalling a plausible RFC
+number and being wrong is the failure this tool exists to prevent.
+
 ## Read one section, not the whole document
 
 Fetching an entire RFC is usually the wrong move. The average is 53 KB but the
@@ -91,6 +127,10 @@ A section includes its subsections and stops at the next heading of the same
 depth. Page headers, footers and form feeds are stripped; pass `--raw` to keep
 them.
 
+`get` without a section or a line range refuses documents over 1500 lines and
+tells you how long they are; run `sections` and pick one. `--full` overrides it
+when the whole text really is the goal, which is rarer than it sounds.
+
 Some older RFCs — RFC 1060 among them — have no numbered headings at all.
 `sections` will say so, and a line range is the fallback:
 
@@ -100,6 +140,9 @@ python3 scripts/rfc.py get 1060 --lines 200:320
 
 Line numbers are the file's real line numbers, so they agree with `sections`,
 with `--fulltext` results, and with `rg` or `sed` over the same file.
+
+`--json` works on every read command — `status`, `search`, `meta`, `sections`,
+`get` — when you want to parse the output rather than read it.
 
 ## Escape hatch
 
@@ -111,13 +154,10 @@ ripgrep directly:
 rg -l 'Retry-After' "$RFC_MIRROR"
 ```
 
-Add `--json` to any read command when you want to parse the output rather than
-read it.
-
 ## Full-text mode is opt-in — never sync unprompted
 
-`rfc.py sync` downloads 512 MB from the RFC Editor's volunteer-run rsync mirror
-and takes a few minutes.
+`python3 scripts/rfc.py sync` downloads 512 MB from the RFC Editor's
+volunteer-run rsync mirror and takes a few minutes.
 
 **Only run it when the user explicitly asks for it.** Do not run it because
 `--fulltext` failed, do not run it to "set things up", and do not run it as a

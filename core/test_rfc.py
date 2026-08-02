@@ -318,8 +318,94 @@ def test_fulltext_without_a_mirror_errors_rather_than_degrading(tmp_path, monkey
     monkeypatch.setenv("RFC_MIRROR", str(tmp_path))
     assert rfc.main(["search", "congestion", "--fulltext"]) == 1
     stderr = capsys.readouterr().err
-    assert "rfc sync" in stderr
+    assert f"{rfc.invocation()} sync" in stderr
     assert "different question" in stderr
+
+
+# --------------------------------------------------------------------------
+# How to re-run this program
+# --------------------------------------------------------------------------
+
+
+def test_a_vendored_copy_names_itself_as_a_module(monkeypatch):
+    """The MCP package installs no `rfc` script, so `rfc sync` is unrunnable there."""
+    monkeypatch.setattr(rfc, "__package__", "mcp_server_rfc")
+    assert rfc.invocation() == "python3 -m mcp_server_rfc.rfc"
+
+
+def test_a_script_run_names_the_path_it_was_run_by(monkeypatch):
+    """The skill's copy is reached as `python3 scripts/rfc.py` and nothing else.
+
+    Echoed back as the caller spelled it, relative path included: they ran it
+    from somewhere, and that spelling is the one that works if they run it again.
+    """
+    source = Path(rfc.__file__)
+    monkeypatch.setattr(rfc, "__package__", "")
+    monkeypatch.chdir(source.parent)
+    monkeypatch.setattr(rfc.sys, "argv", [source.name])
+    assert rfc.invocation() == f"python3 {source.name}"
+
+
+def test_the_console_script_keeps_its_bare_name(monkeypatch):
+    monkeypatch.setattr(rfc, "__package__", "")
+    monkeypatch.setattr(rfc.sys, "argv", ["/usr/local/bin/rfc"])
+    assert rfc.invocation() == "rfc"
+
+
+def test_another_programs_argv_is_not_mistaken_for_this_one(monkeypatch):
+    monkeypatch.setattr(rfc, "__package__", "")
+    monkeypatch.setattr(rfc.sys, "argv", ["/usr/bin/pytest"])
+    assert rfc.invocation() == "rfc"
+
+
+# --------------------------------------------------------------------------
+# The whole-document guard
+# --------------------------------------------------------------------------
+
+
+def test_a_short_rfc_reads_whole_without_complaint():
+    rfc.check_whole_document(
+        791, rfc.WHOLE_DOCUMENT_LINE_LIMIT, list_hint="ignored", override_hint="ignored"
+    )
+
+
+def test_a_long_rfc_refuses_and_says_how_to_scope_it():
+    with pytest.raises(rfc.RFCError) as excinfo:
+        rfc.check_whole_document(9110, 6000, list_hint="rfc sections 9110", override_hint="--full")
+    message = str(excinfo.value)
+    assert "6000 lines" in message
+    # A refusal that does not name the way out just moves the problem.
+    assert "rfc sections 9110" in message
+    assert "--full" in message
+
+
+@pytest.fixture
+def long_document(tmp_path, monkeypatch, records):
+    monkeypatch.setenv("RFC_MIRROR", str(tmp_path))
+    monkeypatch.setattr(rfc, "load_index", lambda *a, **k: records)
+    path = rfc.document_path(tmp_path, 9110)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = "\n".join(f"line {n}" for n in range(rfc.WHOLE_DOCUMENT_LINE_LIMIT + 500))
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_get_refuses_a_whole_long_document(long_document, capsys):
+    assert rfc.main(["get", "9110"]) == 1
+    assert "lines" in capsys.readouterr().err
+
+
+def test_full_overrides_the_guard(long_document, capsys):
+    assert rfc.main(["get", "9110", "--full"]) == 0
+    assert "line 1900" in capsys.readouterr().out
+
+
+def test_an_explicitly_scoped_read_is_never_guarded(long_document, capsys):
+    """The guard is for unscoped reads; asking for a range is asking for it."""
+    assert rfc.main(["get", "9110", "--lines", "10:12"]) == 0
+    out = capsys.readouterr().out
+    assert "line 10" in out
+    assert "line 1900" not in out
 
 
 # --------------------------------------------------------------------------

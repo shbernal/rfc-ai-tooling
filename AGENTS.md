@@ -65,14 +65,27 @@ docker run --rm -i -v "$PWD/mcp/smoke.py:/smoke.py:ro" python:3.13-slim \
 ## Released
 
 `v0.1.0` was tagged and released on 2026-08-01, and both surfaces are live:
-`mcp-server-rfc` on PyPI and `@shbernal/rfc-lookup` on ClawHub. The
-free-to-break pre-release window is over — compatibility and migration are real
-constraints now and must be evaluated before any breaking change.
+`mcp-server-rfc` on PyPI and `@shbernal/rfc-lookup` on ClawHub.
 
 Both registries treat a version as permanent. Never delete or re-publish a
 released version; fix forward with a version bump on whichever surfaces are
 affected. The publish workflow is idempotent on both halves, so re-running it at
 an already-published version skips rather than fails.
+
+### Breaking changes are welcome
+
+Released constrains what a *published version* means, not what the next one may
+do. When the better behaviour is incompatible with the old one, ship the better
+behaviour: remove the old one and bump the version.
+
+- **No deprecation period, no compatibility shims, and no runtime warning that
+  a behaviour has changed.** A migration is read once; code carrying a record
+  of its own history is paid for on every read after that.
+- **Put the notice in `CHANGELOG.md`**, under the version that made the change,
+  naming what moved and how to get the old outcome where one exists.
+- An error message may name the flag that restores prior behaviour when that
+  flag is a genuine feature (`get --full`), never as a notice that something
+  used to work differently.
 
 What a fix has to ship on:
 
@@ -82,3 +95,5 @@ What a fix has to ship on:
 - **`mcp/README.md`** — it is the PyPI project page, so a fix only shows up on a
   new release.
 - **Root `README.md`** — ships in neither artifact. Commit it; publish nothing.
+- **`CHANGELOG.md`** — ships in neither artifact either, but every version bump
+  gets an entry there before the tag is cut, and the date goes in at that point.

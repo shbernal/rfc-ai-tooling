@@ -82,6 +82,8 @@ package from PyPI on first run.
 - **List sections** of an RFC with line numbers, so the agent can read the one
   section it needs instead of pulling a 500 KB document into context.
 - **Fetch** a section, or a line range, with page headers and footers stripped.
+  An unscoped read of a long RFC is refused rather than dumped, naming the
+  document's size and the way to scope it; both surfaces take an override.
 - **Flag obsolescence on every result.** An RFC that has been superseded says so
   in a header the model cannot miss:
 
@@ -177,6 +179,11 @@ make smoke       # stdio JSON-RPC session against the published PyPI server
 `make test`, `make lint` and `make format` run through [uv](https://docs.astral.sh/uv/),
 which syncs the dev dependencies on demand, so they work in a fresh shell with
 no venv activated.
+
+Breaking changes are removals rather than deprecations here: the old behaviour
+goes and the version bumps, with no compatibility shim and no runtime notice
+that something changed. [`CHANGELOG.md`](CHANGELOG.md) is where those are
+recorded — read it before upgrading.
 
 ## License
 

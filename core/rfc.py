@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from email.utils import formatdate
 from pathlib import Path
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 INDEX_URL = "https://www.rfc-editor.org/rfc-index.txt"
 RFC_URL = "https://www.rfc-editor.org/rfc/rfc{number}.txt"
@@ -46,6 +46,12 @@ RSYNC_MODULE = "rsync.rfc-editor.org::rfcs-text-only/"
 DEFAULT_MIRROR = Path.home() / ".local" / "share" / "rfc-ai-tooling"
 
 INDEX_TTL_SECONDS = 7 * 24 * 60 * 60
+# Where "just read the whole thing" stops being reasonable. Short RFCs are
+# cheap and refusing them would be pedantry; past roughly 20k tokens an
+# unscoped read stops being a document and becomes a context window. Both
+# surfaces advise reading one section, and advice is the weaker half of a
+# guardrail — this is the half that holds when the advice is skipped.
+WHOLE_DOCUMENT_LINE_LIMIT = 1500
 # Enough documents that full-text search is worth offering. A handful of
 # on-demand fetches accumulating in the mirror should not look like a sync.
 POPULATED_THRESHOLD = 1000
@@ -56,6 +62,36 @@ USER_AGENT = f"rfc-ai-tooling/{__version__} (+https://github.com/shbernal/rfc-ai
 
 class RFCError(Exception):
     """Anything the user should see as a clean error rather than a traceback."""
+
+
+def invocation() -> str:
+    """How to re-run this program, spelled the way the caller actually reached it.
+
+    Error messages here tell the reader to run another command, and the two
+    surfaces disagree about what that command is. The PyPI package installs no
+    `rfc` console script and the skill ships this file with nothing on PATH, so
+    a hardcoded "run `rfc sync`" is advice that fails as typed in the place it
+    fires most often — the --fulltext refusal, which is the first wall an agent
+    hits on an unsynced machine.
+
+    Vendored into a package, this file is reachable as a module whether it was
+    run with -m or imported by the MCP server, and the module path is right in
+    both cases. Standalone, argv[0] is trusted only when it points at this very
+    file; anything else is some other program's entry point.
+    """
+    if __package__:
+        return f"python3 -m {__package__}.{Path(__file__).stem}"
+    argv0 = sys.argv[0] if sys.argv else ""
+    if not argv0:
+        return "rfc"
+    if Path(argv0).name in {"rfc", "rfc.exe"}:
+        return "rfc"
+    try:
+        if Path(argv0).resolve() == Path(__file__).resolve():
+            return f"python3 {argv0}"
+    except OSError:
+        pass
+    return "rfc"
 
 
 # --------------------------------------------------------------------------
@@ -360,8 +396,8 @@ def load_index(mirror: Path, offline_only: bool = False) -> dict[int, Record]:
         path = ensure_index(mirror)
     if not path.exists():
         raise RFCError(
-            f"no RFC index at {path}. Run `rfc status` while online to fetch it, "
-            f"or `rfc sync` for the full corpus."
+            f"no RFC index at {path}. Run `{invocation()} status` while online to "
+            f"fetch it, or `{invocation()} sync` for the full corpus."
         )
     return parse_index(path.read_text(encoding="utf-8", errors="replace"))
 
@@ -482,6 +518,25 @@ def section_range(sections: list[dict], wanted: str, total_lines: int) -> tuple[
             end = section["line"] - 1
             break
     return start, end, sections[index]
+
+
+def check_whole_document(
+    number: int, total_lines: int, *, list_hint: str, override_hint: str
+) -> None:
+    """Refuse an unscoped read of a long RFC, naming the way to scope it.
+
+    Only for reads with no section and no line range. Anything explicitly
+    scoped is the caller saying what they want, and a large section they asked
+    for by name is not the failure mode this exists to catch.
+    """
+    if total_lines <= WHOLE_DOCUMENT_LINE_LIMIT:
+        return
+    raise RFCError(
+        f"RFC {number} is {total_lines} lines — reading it whole would spend the "
+        f"context on a specification you have one question about. Run "
+        f"`{list_hint}` to find the section that answers it, then read that. "
+        f"{override_hint} overrides this if you genuinely need the entire text."
+    )
 
 
 def slice_lines(lines: list[str], start: int, end: int, raw: bool) -> str:
@@ -747,7 +802,9 @@ def cmd_status(args: argparse.Namespace) -> int:
     else:
         lines.append(f"index: not present (will be fetched on first use) — {path}")
     if not populated:
-        lines.append("run `rfc sync` for full-text search across the whole corpus (512 MB)")
+        lines.append(
+            f"run `{invocation()} sync` for full-text search across the whole corpus (512 MB)"
+        )
 
     payload = {
         "mode": "offline" if populated else "online",
@@ -768,7 +825,7 @@ def cmd_meta(args: argparse.Namespace) -> int:
     if record is None:
         raise RFCError(
             f"RFC {number} is not in the index. If it was published very recently, "
-            f"`rfc get {number}` may still retrieve it."
+            f"`{invocation()} get {number}` may still retrieve it."
         )
     lines = [record.header()]
     if record.authors:
@@ -807,8 +864,8 @@ def cmd_search(args: argparse.Namespace) -> int:
     if args.fulltext and not populated:
         raise RFCError(
             "full-text search needs a local mirror, which is not present.\n"
-            "Run `rfc sync` (512 MB, a few minutes) to enable it, or search titles "
-            "by dropping --fulltext.\n"
+            f"Run `{invocation()} sync` (512 MB, a few minutes) to enable it, or "
+            "search titles by dropping --fulltext.\n"
             "Not falling back to title search: it would quietly answer a different "
             "question than the one asked."
         )
@@ -856,7 +913,7 @@ def cmd_search(args: argparse.Namespace) -> int:
         human = "\n".join(r.header() for r in hits)
         human += _truncation_note(len(hits), total)
         if not populated:
-            human += "\n\n(titles only — `rfc sync` enables full-text search)"
+            human += f"\n\n(titles only — `{invocation()} sync` enables full-text search)"
     else:
         human = "no matches"
     _emit(payload, human, args.json)
@@ -916,6 +973,13 @@ def cmd_get(args: argparse.Namespace) -> int:
         start = int(match.group(1))
         end = int(match.group(2)) if match.group(2) else len(lines)
     else:
+        if not args.full:
+            check_whole_document(
+                number,
+                len(lines),
+                list_hint=f"{invocation()} sections {number}",
+                override_hint="--full",
+            )
         start, end = 1, len(lines)
 
     body = slice_lines(lines, start, end, args.raw)
@@ -939,8 +1003,10 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="rfc",
-        description="Look up IETF RFCs. Works with no setup; `rfc sync` adds full-text search.",
+        prog=invocation(),
+        description=(
+            f"Look up IETF RFCs. Works with no setup; `{invocation()} sync` adds full-text search."
+        ),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument(
@@ -979,6 +1045,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_get.add_argument("number")
     p_get.add_argument("--section", help="section number (e.g. 6.1) or heading text")
     p_get.add_argument("--lines", help="line range START:END, for RFCs without headings")
+    p_get.add_argument(
+        "--full",
+        action="store_true",
+        help=f"read the whole document even past {WHOLE_DOCUMENT_LINE_LIMIT} lines",
+    )
     p_get.add_argument("--raw", action="store_true", help="keep page headers and footers")
     add_read_flags(p_get)
     p_get.set_defaults(func=cmd_get)
