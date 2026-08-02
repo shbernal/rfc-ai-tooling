@@ -37,6 +37,11 @@ make smoke         # drive the *published* PyPI server over real stdio JSON-RPC
 
 Run `make sync-core lint test` before committing any change to `core/rfc.py`.
 
+`pytest` and `ruff` are dev dependencies, so the targets that need them run
+through `uv run`, which syncs the environment on demand — no activated venv
+required. `make test RUN=` calls the bare commands instead, for an environment
+you manage yourself.
+
 `make smoke` is the only target that tests something other than this working
 tree, so it is a release step, not a development one. Run it cold — inside a
 container, on a filesystem that has never held this repo — because a warm

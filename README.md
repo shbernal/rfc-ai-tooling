@@ -174,6 +174,10 @@ make lint        # ruff check + format --check
 make smoke       # stdio JSON-RPC session against the published PyPI server
 ```
 
+`make test`, `make lint` and `make format` run through [uv](https://docs.astral.sh/uv/),
+which syncs the dev dependencies on demand, so they work in a fresh shell with
+no venv activated.
+
 ## License
 
 MIT. See [`LICENSE`](LICENSE), and [`NOTICE`](NOTICE) for attribution and for
