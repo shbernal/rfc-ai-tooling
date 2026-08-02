@@ -32,9 +32,20 @@ make test          # pytest, no network (network-marked tests are excluded)
 make lint          # ruff check + format --check
 make format        # ruff format .
 make check-vendor  # verify vendored copies match core/rfc.py
+make smoke         # drive the *published* PyPI server over real stdio JSON-RPC
 ```
 
 Run `make sync-core lint test` before committing any change to `core/rfc.py`.
+
+`make smoke` is the only target that tests something other than this working
+tree, so it is a release step, not a development one. Run it cold — inside a
+container, on a filesystem that has never held this repo — because a warm
+`~/.cache/uv` or a leftover mirror invalidates the result:
+
+```bash
+docker run --rm -i -v "$PWD/mcp/smoke.py:/smoke.py:ro" python:3.13-slim \
+  bash -c 'pip install -q uv && python3 /smoke.py'
+```
 
 ## Conventions
 
@@ -46,15 +57,23 @@ Run `make sync-core lint test` before committing any change to `core/rfc.py`.
 - No RFC text is bundled in either surface; the corpus is fetched from the RFC
   Editor on demand and optionally mirrored locally via `rfc sync`.
 
-## Pre-release
+## Released
 
-No GitHub release has been cut yet. Treat the project as pre-release and free
-to change:
+`v0.1.0` was tagged and released on 2026-08-01, and both surfaces are live:
+`mcp-server-rfc` on PyPI and `@shbernal/rfc-lookup` on ClawHub. The
+free-to-break pre-release window is over — compatibility and migration are real
+constraints now and must be evaluated before any breaking change.
 
-- Do not preserve backwards compatibility unless explicitly asked.
-- Do not defer to the prior architecture when it conflicts with the current
-  goal.
-- Existing code, docs, and plans are context, not constraints.
+Both registries treat a version as permanent. Never delete or re-publish a
+released version; fix forward with a version bump on whichever surfaces are
+affected. The publish workflow is idempotent on both halves, so re-running it at
+an already-published version skips rather than fails.
 
-Once there is a GitHub release, compatibility and migration concerns become
-real constraints and must be evaluated before breaking changes.
+What a fix has to ship on:
+
+- **`core/rfc.py` or `server.py`** — a bump on whichever surfaces are affected.
+- **`skill/SKILL.md`** — needs a ClawHub bump. The skill artifact embeds it, so
+  a description or trigger fix does not reach users without a release.
+- **`mcp/README.md`** — it is the PyPI project page, so a fix only shows up on a
+  new release.
+- **Root `README.md`** — ships in neither artifact. Commit it; publish nothing.

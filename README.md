@@ -16,12 +16,47 @@ search across the whole corpus if you choose to sync a local mirror.
 
 ## Install the skill
 
+### Into one project
+
+Use [skillbarn](https://www.npmjs.com/package/skillbarn), which vendors skills
+from a committed lockfile the way `node_modules` vendors packages:
+
+```bash
+pnpm add -g skillbarn clawhub          # npm i -g works too; needs Node 22+
+skb init --dir .claude/skills          # omit for OpenClaw; it defaults to .agents/skills
+skb add @shbernal/rfc-lookup
+```
+
+Commit `skillbarn.json` and `skillbarn.lock`; the skill tree itself is
+gitignored, and `skb install` restores exactly those bytes in a fresh clone.
+The `--dir` matters: `skb` flattens to `<dir>/rfc-lookup/`, which is the layout
+Claude Code can actually see — see below.
+
+### User-wide
+
 ```bash
 clawhub install @shbernal/rfc-lookup
 ```
 
-That is the whole installation. The skill ships a single stdlib-only Python
-script; there is nothing to `pip install`.
+That lands in `<workdir>/skills/@shbernal/rfc-lookup`, where the workdir is
+`$CLAWHUB_WORKDIR` or the current directory. **OpenClaw** reads that as-is: it
+finds `SKILL.md` anywhere under a skills root and takes the skill's identity
+from its frontmatter, not from the path.
+
+**Claude Code does not.** It scans `~/.claude/skills/<name>/SKILL.md` exactly
+one level deep and never descends into the `@shbernal/` publisher directory
+ClawHub creates, so a skill left there is silently never loaded. Point clawhub
+at the right tree — `--dir` alone is not enough, since it resolves relative to
+the workdir — and then flatten:
+
+```bash
+clawhub --workdir ~/.claude --dir skills install @shbernal/rfc-lookup
+mv ~/.claude/skills/@shbernal/rfc-lookup ~/.claude/skills/rfc-lookup
+rmdir ~/.claude/skills/@shbernal
+```
+
+Either route, that is the whole installation: the skill ships a single
+stdlib-only Python script, and there is nothing to `pip install`.
 
 ## Install the MCP server
 
@@ -65,11 +100,18 @@ package from PyPI on first run.
 By default, RFCs are fetched over HTTPS as needed and cached. Searching is
 limited to titles, which is enough to find a document you can already name.
 
-Syncing a local mirror adds full-text search across all 9,812 RFCs:
+Syncing a local mirror adds full-text search across all 9,812 RFCs. Neither
+surface puts an `rfc` command on your `PATH`, so run the script where it landed:
 
 ```bash
-rfc sync
+# skill — <skills-dir> is .claude/skills, ~/.claude/skills, .agents/skills, …
+python3 <skills-dir>/rfc-lookup/scripts/rfc.py sync
+
+# MCP server
+uvx --from mcp-server-rfc python -m mcp_server_rfc.rfc sync
 ```
+
+Both write to the same place, so one sync serves both surfaces.
 
 | | |
 |---|---|
@@ -129,6 +171,7 @@ lets the skill be self-contained and keeps the MCP server's only dependency the
 make sync-core   # copy core/rfc.py into both surfaces
 make test        # pytest, no network
 make lint        # ruff check + format --check
+make smoke       # stdio JSON-RPC session against the published PyPI server
 ```
 
 ## License
