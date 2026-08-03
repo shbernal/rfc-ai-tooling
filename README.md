@@ -90,6 +90,15 @@ package from PyPI on first run. The client spawns the server as a child process
 on your machine and talks to it over stdin and stdout, which is why this route
 works in Claude Desktop, Cursor and Zed and cannot work from a cloud session.
 
+The published package has been driven end to end from Claude Desktop on Linux —
+`claude-desktop-bin` 1.20186.9-1, an unofficial repackage of the official
+`.deb` — with the config above verbatim, and the obsolescence banner confirmed
+reaching the model. That is one build on one platform; macOS and Windows are
+expected to work and have not been checked.
+[`docs/desktop-verification.md`](docs/desktop-verification.md) records how to
+tell whether a client really called the tools, which is less obvious than it
+sounds.
+
 ## Deploy the HTTP mode
 
 Cloud sessions connect outward to a URL. They cannot start a process on your

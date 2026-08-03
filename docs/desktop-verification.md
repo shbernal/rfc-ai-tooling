@@ -123,6 +123,39 @@ from.
 |---|---|---|---|
 | 2026-08-02 | 0.1.0 (PyPI) | Desktop, unknown | Handshake only. Connected, 3 tools listed, no calls. |
 | 2026-08-03 | 0.1.0 (PyPI) | Claude Code in Desktop (`local_722995b1…`) | `list_sections` and `get_rfc` on RFC 1020 both returned real content, no error. Obsolescence banner (`!! OBSOLETED BY: RFC 1062, 1117, 1166`) reached the model and was relayed in the reply. |
+| 2026-08-03 | 0.2.0 (PyPI) | Claude Code in Desktop, four sessions | Four probes. Banner reached and was relayed for RFC 2616 and RFC 791. The no-mirror full-text refusal surfaced and the model stopped rather than substituting a title search. The four-step loop ran as designed on a spec question. Two defects found — see below. |
+
+### What the 0.2.0 probes established
+
+**The banner survives the whole path.** RFC 2616 came back with `!! OBSOLETED
+BY: RFC 7230…7235` and the model opened with "obsoleted in 2014, caching split
+out into RFC 7234". RFC 791's `!! UPDATED BY` was relayed with what each update
+changed. This is the feature the project exists for, confirmed end to end.
+
+**Obsolescence metadata actively redirects.** Asked what the spec requires for
+`Retry-After`, the model searched, got RFC 7231, read `obsoleted_by: [9110]`,
+switched to 9110 before reading anything, then `list_sections` → `get_rfc
+{"section": "10.2.3"}` → 27 lines. The intended loop, reached without prompting.
+
+**An error can survive the tool and still not survive the model.** The no-mirror
+refusal names `uvx mcp-server-rfc sync`, which runs as typed. The model relayed
+the substance and correctly refused to fall back to a title search, but
+paraphrased the command away — "I can set it up now via the shell". A message
+being correct at the tool boundary is not the same as it reaching the user.
+
+**A guard cannot be demonstrated by a model that does not need it.** The
+unscoped-read guard never fired on "Summarize RFC 791", because the model called
+`list_sections` first and then read sections by name. That is the desired
+behaviour, and it means no natural prompt exercises the guard. Prove that one
+from the CLI and the unit tests instead.
+
+**Two defects came out of reading the arguments, not the answers.** A dropped
+`max_lines`, and a 1000-line section guard added in response that then refused
+the project's own canonical section read. Both are in `CHANGELOG.md` under 0.2.1
+and 0.2.3. The second is the sharper lesson: `make smoke` drives the *published*
+server by design, so the check that caught the regression could only run after
+the release that shipped it. Fixing forward is the intended answer, but expect
+to need it.
 
 Tested against `claude-desktop-bin` 1.20186.9-1, an unofficial Linux repackage
 of the official `.deb`, with `uvx mcp-server-rfc` resolved from `/usr/bin/uvx`.
