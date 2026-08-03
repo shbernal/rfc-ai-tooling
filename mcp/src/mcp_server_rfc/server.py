@@ -30,6 +30,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger("mcp-server-rfc")
 
+# The spelling of this CLI that the reader can actually type. `uvx
+# mcp-server-rfc` is the documented install and the one a client spawns, and it
+# resolves the package into a throwaway environment: the bare console script is
+# not on the user's PATH afterwards, and neither is the module `rfc.py` would
+# otherwise name itself by. Prefixing `uvx` costs a reader who installed the
+# package some other way nothing — it resolves the same package, and `sync`
+# writes to the same mirror either way — so one spelling serves everyone.
+#
+# This has to be a constant. From inside the process a throwaway environment is
+# indistinguishable from an installed one: the package imports, and uv puts its
+# bin directory on PATH for the child. The knowledge lives here, in the package
+# that knows how it is distributed, or nowhere.
+CLI = "uvx mcp-server-rfc"
+rfc.CLI_NAME = CLI
+
 server = MCPServer(
     "rfc",
     version=rfc.__version__,
@@ -81,8 +96,8 @@ def _no_mirror_message() -> str:
         if _over_http
         else "Full-text search needs a local RFC mirror, which is not present. "
         "The user can create one by running "
-        f"`{rfc.invocation()} sync` in a shell, in the environment this "
-        "server is installed in (512 MB, a few minutes)."
+        f"`{rfc.invocation()} sync` in any shell on this machine "
+        "(512 MB, a few minutes)."
     )
     return (
         f"{where} Searching titles instead would answer a different question, "
@@ -230,9 +245,15 @@ def build_parser() -> argparse.ArgumentParser:
     command line. `PORT` and `HOST` are spelled the way platforms spell them.
     """
     parser = argparse.ArgumentParser(
-        prog="mcp-server-rfc",
+        prog=CLI,
         description="MCP server for looking up IETF RFCs.",
+        epilog=(
+            f"A subcommand runs the CLI instead of the server: `{CLI} sync` downloads "
+            f"the corpus for full-text search, `{CLI} status` reports what is present. "
+            f"`{CLI} <command> --help` for the rest."
+        ),
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {rfc.__version__}")
     parser.add_argument(
         "--transport",
         choices=("stdio", "http"),
@@ -254,7 +275,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    args = build_parser().parse_args()
+    argv = sys.argv[1:]
+    if argv and not argv[0].startswith("-"):
+        # This entry point is the CLI as well as the server, because the errors
+        # the server hands the model name it: `uvx mcp-server-rfc sync` has to
+        # sync. The server itself takes only flags, so anything positional is
+        # rfc.py's business — including an unknown command, which its parser
+        # rejects with the list of real ones.
+        raise SystemExit(rfc.main(argv))
+
+    args = build_parser().parse_args(argv)
 
     if args.transport == "stdio":
         logger.info("mcp-server-rfc %s starting on stdio", rfc.__version__)

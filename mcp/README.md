@@ -45,8 +45,13 @@ Works with no setup, fetching documents on demand. Full-text search additionally
 requires a local mirror, which the user creates from a shell:
 
 ```bash
-uvx --from mcp-server-rfc python -m mcp_server_rfc.rfc sync
+uvx mcp-server-rfc sync
 ```
+
+The same command that runs the server runs its CLI: `sync` downloads the
+corpus, `status` reports what is present, and `uvx mcp-server-rfc <command>
+--help` covers the rest. It is also the command the server names in the error
+you get when full-text search is asked for without a mirror.
 
 512 MB, a few minutes, entirely optional. The server deliberately does not
 expose a sync tool: half a gigabyte pulled from a volunteer-run mirror should be

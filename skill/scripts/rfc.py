@@ -64,6 +64,14 @@ class RFCError(Exception):
     """Anything the user should see as a clean error rather than a traceback."""
 
 
+# A host that ships its own entry point for this CLI sets this to the command
+# that reaches it. Nothing observable from inside the process distinguishes an
+# ephemeral environment from an installed one — `uvx` leaves the package
+# importable and its bin directory on PATH — so the spelling has to come from
+# the surface that knows how it is distributed, not from a guess made here.
+CLI_NAME: str | None = None
+
+
 def invocation() -> str:
     """How to re-run this program, spelled the way the caller actually reached it.
 
@@ -74,11 +82,14 @@ def invocation() -> str:
     fires most often — the --fulltext refusal, which is the first wall an agent
     hits on an unsynced machine.
 
-    Vendored into a package, this file is reachable as a module whether it was
-    run with -m or imported by the MCP server, and the module path is right in
-    both cases. Standalone, argv[0] is trusted only when it points at this very
-    file; anything else is some other program's entry point.
+    A host that set CLI_NAME has already answered the question and is believed.
+    Otherwise: vendored into a package, this file is reachable as a module
+    whether it was run with -m or imported by the MCP server, and the module
+    path is right in both cases. Standalone, argv[0] is trusted only when it
+    points at this very file; anything else is some other program's entry point.
     """
+    if CLI_NAME:
+        return CLI_NAME
     if __package__:
         return f"python3 -m {__package__}.{Path(__file__).stem}"
     argv0 = sys.argv[0] if sys.argv else ""

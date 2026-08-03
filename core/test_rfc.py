@@ -327,6 +327,19 @@ def test_fulltext_without_a_mirror_errors_rather_than_degrading(tmp_path, monkey
 # --------------------------------------------------------------------------
 
 
+def test_a_host_that_names_its_own_entry_point_is_believed(monkeypatch):
+    """`uvx` leaves this importable while its console script is unreachable.
+
+    The module form below is right for a pip install and unrunnable for the
+    ephemeral one Claude Desktop spawns, and the two are indistinguishable from
+    in here — so a surface that knows how it ships gets to say.
+    """
+    monkeypatch.setattr(rfc, "__package__", "mcp_server_rfc")
+    monkeypatch.setattr(rfc, "CLI_NAME", "uvx mcp-server-rfc")
+    assert rfc.invocation() == "uvx mcp-server-rfc"
+    assert rfc.build_parser().prog == "uvx mcp-server-rfc"
+
+
 def test_a_vendored_copy_names_itself_as_a_module(monkeypatch):
     """The MCP package installs no `rfc` script, so `rfc sync` is unrunnable there."""
     monkeypatch.setattr(rfc, "__package__", "mcp_server_rfc")

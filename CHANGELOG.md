@@ -30,6 +30,13 @@ code announces that something used to work differently.
   and says so rather than falling back to a title search. Everything else
   behaves identically: the index it needs is 2 MB and is fetched on demand.
 
+- **`mcp-server-rfc` is now the CLI as well as the server.** A subcommand runs
+  the CLI, so `uvx mcp-server-rfc sync` downloads the corpus and `uvx
+  mcp-server-rfc status` reports what is present; with no subcommand, or with
+  only transport flags, it serves MCP exactly as before. Every command `rfc.py`
+  offers is reachable this way, and `uvx mcp-server-rfc <command> --help`
+  documents them.
+
 ### Breaking
 
 - **Reading a whole RFC over 1500 lines is now an error rather than a dump.**
@@ -45,12 +52,16 @@ code announces that something used to work differently.
 
 - **Error messages now name a command that exists where they are read.** Six of
   them said to run `rfc sync` or `rfc status`, but no `rfc` executable is
-  installed by either surface: the skill runs `python3 scripts/rfc.py` and the
-  package is reachable as `python3 -m mcp_server_rfc.rfc`. The instruction
-  failed as typed at exactly the moment it mattered most — the `--fulltext`
-  refusal on an unsynced machine, which is the first wall an agent hits.
-  Commands are now derived from how the program was actually invoked, which
-  also fixes `--help`'s usage line.
+  installed by either surface. The instruction failed as typed at exactly the
+  moment it mattered most — the `--fulltext` refusal on an unsynced machine,
+  which is the first wall an agent hits. The skill now says `python3
+  scripts/rfc.py`, derived from how it was invoked, which also fixes `--help`'s
+  usage line; the MCP server says `uvx mcp-server-rfc`, because `uvx` is how it
+  is installed and it resolves the package into a throwaway environment that
+  leaves neither a console script nor an importable module on the user's PATH.
+  A module form (`python3 -m mcp_server_rfc.rfc`) would have been just as
+  unrunnable there, and nothing observable from inside the process tells the two
+  installs apart.
 
 ### Skill
 

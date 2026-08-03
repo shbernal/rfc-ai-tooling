@@ -147,14 +147,14 @@ By default, RFCs are fetched over HTTPS as needed and cached. Searching is
 limited to titles, which is enough to find a document you can already name.
 
 Syncing a local mirror adds full-text search across all 9,812 RFCs. Neither
-surface puts an `rfc` command on your `PATH`, so run the script where it landed:
+surface puts an `rfc` command on your `PATH`, so each has its own spelling:
 
 ```bash
 # skill — <skills-dir> is .claude/skills, ~/.claude/skills, .agents/skills, …
 python3 <skills-dir>/rfc-lookup/scripts/rfc.py sync
 
-# MCP server
-uvx --from mcp-server-rfc python -m mcp_server_rfc.rfc sync
+# MCP server — the same command that runs the server also runs the CLI
+uvx mcp-server-rfc sync
 ```
 
 Both write to the same place, so one sync serves both surfaces.
