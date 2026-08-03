@@ -360,12 +360,14 @@ def ensure_index(mirror: Path, ttl: int = INDEX_TTL_SECONDS, force: bool = False
     report an RFC published in March as nonexistent, even though its URL fetches
     perfectly well, and there is no way for the user to tell why.
 
-    Revalidation sends both If-None-Match and If-Modified-Since. As of
-    2026-08-01 the RFC Editor's CDN honours neither — it answers 200 with the
-    full 2 MB even when handed back its own ETag verbatim — so treat the 304
-    path as an optimisation that may start working rather than one that does.
-    That is affordable only because the TTL is a week; do not shorten it without
-    re-checking whether conditional requests have started working.
+    Revalidation sends both If-None-Match and If-Modified-Since. Since
+    2026-08-03 the RFC Editor's CDN honours the first: handed back its own ETag
+    it answers 304, so refreshing an index that has not changed costs a header
+    exchange rather than 2 MB. It still sends no Last-Modified, so
+    If-Modified-Since cannot produce a 304 on its own. It is sent anyway
+    because RFC 9110 gives If-None-Match precedence wherever both are present,
+    which makes it free, and it would cover an index whose stored ETag was lost
+    if the CDN ever starts emitting one.
     """
     path = index_path(mirror)
     etag_path = mirror / ".rfc-index.etag"
