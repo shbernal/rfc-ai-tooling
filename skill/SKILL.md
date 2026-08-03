@@ -127,9 +127,15 @@ A section includes its subsections and stops at the next heading of the same
 depth. Page headers, footers and form feeds are stripped; pass `--raw` to keep
 them.
 
-`get` without a section or a line range refuses documents over 1500 lines and
-tells you how long they are; run `sections` and pick one. `--full` overrides it
-when the whole text really is the goal, which is rarer than it sounds.
+`sections` reports how long each section runs, so the cost of a read is visible
+before you pay it. Most are a few hundred lines; a handful — RFC 2616's section
+13 among them — run past a thousand, which is a whole document by another name.
+
+`get` without a section or a line range refuses documents over 1500 lines, and a
+section over 1000, telling you how long they are; run `sections` and pick a
+smaller one. `--max-lines N` caps any read, including a section, when the first
+part is enough. `--full` overrides both guards when the whole text really is the
+goal, which is rarer than it sounds.
 
 Some older RFCs — RFC 1060 among them — have no numbered headings at all.
 `sections` will say so, and a line range is the fallback:

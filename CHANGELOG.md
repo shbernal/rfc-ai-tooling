@@ -8,6 +8,38 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## 0.2.1 — 2026-08-03
+
+Both fixes come from driving the published 0.2.0 through Claude Desktop and
+reading what the model actually sent. See `docs/desktop-verification.md`.
+
+### Fixed
+
+- **`max_lines` was silently discarded when `section` was also given.** The MCP
+  schema accepted both and honoured only the section, so a model asking for
+  section 3.1 of RFC 791 capped at 120 lines received all 729 of it, 26 KB,
+  with nothing indicating an argument had been dropped. It now caps the section,
+  and on the CLI `--max-lines` does the same for every read. `--section` with
+  `--lines`, and `section` with `start_line`, are contradictory rather than
+  merely redundant — both name where to start — and are now an error instead of
+  a silent preference for one of them.
+
+### Changed
+
+- **A section over 1000 lines is now refused unless capped.** RFC 2616's section
+  13 is 1431 lines: comfortably under the whole-document limit, and so a fully
+  scoped, entirely reasonable-looking request that still costs what reading the
+  RFC would have. The whole-document guard deliberately ignores sections, on the
+  grounds that naming one *is* the scoping — this is the case where that stops
+  being true. Pass `max_lines` for the first part of it, read a subsection, or
+  `full=true` / `--full` to override.
+
+- **`list_sections` and `sections` now report each section's length.** The guard
+  above is the half that holds when advice is skipped; this is the half that
+  makes the advice followable. Previously nothing short of reading a section
+  revealed how long it was, so a model had no way to prefer a smaller one — it
+  found out by receiving 59 KB.
+
 ## 0.2.0 — 2026-08-03
 
 ### Added

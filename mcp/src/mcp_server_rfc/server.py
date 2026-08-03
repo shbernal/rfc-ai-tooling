@@ -159,11 +159,13 @@ def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
 @server.tool(
     annotations=READ_ONLY,
     description=(
-        "List an RFC's numbered headings with their line numbers. Cheap, and the right "
-        "first call when you need part of a specification: use it to pick a section, "
-        "then pass that section to get_rfc. Some pre-1990 RFCs have no numbered "
-        "headings, in which case this returns an empty list and get_rfc's line range "
-        "is the way in."
+        "List an RFC's numbered headings with their line numbers and how many lines "
+        "each one runs to. Cheap, and the right first call when you need part of a "
+        "specification: use it to pick a section, then pass that section to get_rfc. "
+        "The line counts are there to be read — a section of a few hundred lines is a "
+        "normal read, and one running to four figures wants a subsection or a "
+        "max_lines cap instead. Some pre-1990 RFCs have no numbered headings, in which "
+        "case this returns an empty list and get_rfc's line range is the way in."
     ),
 )
 def list_sections(number: int) -> dict:
@@ -190,8 +192,11 @@ def list_sections(number: int) -> dict:
         "('Idempotent Methods') and includes that section's subsections. Asking for a "
         "long RFC with no section and no line range is an error naming its size, not a "
         "silent context-filling dump; pass full=true only when the entire text is "
-        "genuinely what you need. start_line and "
-        "max_lines are the fallback for RFCs without numbered headings. Page headers "
+        "genuinely what you need, and the same applies to a section long enough to "
+        "cost what the whole RFC would. max_lines caps any read, including a section, "
+        "and is the way to take the first part of a long one. start_line is the "
+        "fallback for RFCs without numbered headings and cannot be combined with "
+        "section. Page headers "
         "and footers are stripped. The response carries a banner naming the RFC's "
         "status and, if it has been superseded, what replaced it."
     ),
@@ -211,8 +216,21 @@ def get_rfc(
 
         section_info = None
         if section:
+            if start_line:
+                return _fail(
+                    "section and start_line both choose where to start reading; pass "
+                    "one. Use max_lines to cap how much of a section comes back."
+                )
             sections = rfc.find_sections(lines)
             start, end, section_info = rfc.section_range(sections, section, len(lines))
+            if not (full or max_lines):
+                rfc.check_section_length(
+                    number,
+                    section,
+                    end - start + 1,
+                    list_hint=f"list_sections({number})",
+                    cap_hint="pass max_lines",
+                )
         else:
             if not (full or start_line or max_lines):
                 rfc.check_whole_document(
@@ -222,7 +240,10 @@ def get_rfc(
                     override_hint="full=true",
                 )
             start = start_line or 1
-            end = start + max_lines - 1 if max_lines else len(lines)
+            end = len(lines)
+
+        if max_lines:
+            end = min(end, start + max_lines - 1)
 
         return {
             "number": number,

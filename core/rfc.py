@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from email.utils import formatdate
 from pathlib import Path
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 INDEX_URL = "https://www.rfc-editor.org/rfc-index.txt"
 RFC_URL = "https://www.rfc-editor.org/rfc/rfc{number}.txt"
@@ -52,6 +52,10 @@ INDEX_TTL_SECONDS = 7 * 24 * 60 * 60
 # surfaces advise reading one section, and advice is the weaker half of a
 # guardrail — this is the half that holds when the advice is skipped.
 WHOLE_DOCUMENT_LINE_LIMIT = 1500
+# A section this long is a document inside a document, and every RFC that has
+# one also has subsections to reach instead. Lower than the whole-document limit
+# because a section is already meant to be the scoped read.
+SECTION_LINE_LIMIT = 1000
 # Enough documents that full-text search is worth offering. A handful of
 # on-demand fetches accumulating in the mirror should not look like a sync.
 POPULATED_THRESHOLD = 1000
@@ -497,7 +501,22 @@ def find_sections(lines: list[str]) -> list[dict]:
                 "depth": number.count(".") + 1,
             }
         )
+    # How long each section is, so that a caller choosing one can see what it
+    # costs before paying for it. Without this the only way to find out a
+    # section is 1400 lines is to read 1400 lines.
+    for i, section in enumerate(sections):
+        section["lines"] = _section_end(sections, i, len(lines)) - section["line"] + 1
     return sections
+
+
+def _section_end(sections: list[dict], index: int, total_lines: int) -> int:
+    """Last line of sections[index]: a section runs until the next heading at
+    the same or a shallower depth, so section 6 includes 6.1 but stops at 7."""
+    depth = sections[index]["depth"]
+    for section in sections[index + 1 :]:
+        if section["depth"] <= depth:
+            return section["line"] - 1
+    return total_lines
 
 
 def section_range(sections: list[dict], wanted: str, total_lines: int) -> tuple[int, int, dict]:
@@ -521,14 +540,7 @@ def section_range(sections: list[dict], wanted: str, total_lines: int) -> tuple[
     if index is None:
         raise RFCError(f"no section {wanted!r}; run `sections` to list them")
 
-    start = sections[index]["line"]
-    depth = sections[index]["depth"]
-    end = total_lines
-    for section in sections[index + 1 :]:
-        if section["depth"] <= depth:
-            end = section["line"] - 1
-            break
-    return start, end, sections[index]
+    return sections[index]["line"], _section_end(sections, index, total_lines), sections[index]
 
 
 def check_whole_document(
@@ -547,6 +559,27 @@ def check_whole_document(
         f"context on a specification you have one question about. Run "
         f"`{list_hint}` to find the section that answers it, then read that. "
         f"{override_hint} overrides this if you genuinely need the entire text."
+    )
+
+
+def check_section_length(
+    number: int, section: str, span: int, *, list_hint: str, cap_hint: str
+) -> None:
+    """Refuse an uncapped read of a very long section.
+
+    Naming a section is normally the caller scoping their read, which is why
+    `check_whole_document` deliberately leaves it alone. The exception is a
+    section long enough that reading it costs what reading the RFC would have:
+    that is the same failure the whole-document guard exists to catch, reached
+    through a door it does not watch.
+    """
+    if span <= SECTION_LINE_LIMIT:
+        return
+    raise RFCError(
+        f"section {section} of RFC {number} is {span} lines — long enough that "
+        f"reading it whole is the cost the section guard exists to avoid. Run "
+        f"`{list_hint}` and read one of its subsections, or {cap_hint} to take "
+        f"the first part of it."
     )
 
 
@@ -940,7 +973,8 @@ def cmd_sections(args: argparse.Namespace) -> int:
     human = [header]
     if sections:
         human += [
-            f"{'  ' * (s['depth'] - 1)}{s['section']}  {s['title']}  (line {s['line']})"
+            f"{'  ' * (s['depth'] - 1)}{s['section']}  {s['title']}  "
+            f"(line {s['line']}, {s['lines']} lines)"
             for s in sections
         ]
     else:
@@ -975,8 +1009,21 @@ def cmd_get(args: argparse.Namespace) -> int:
 
     section_info = None
     if args.section:
+        if args.lines:
+            raise RFCError(
+                "--section and --lines both choose where to start reading; pass one. "
+                "Use --max-lines to cap how much of a section comes back."
+            )
         sections = find_sections(lines)
         start, end, section_info = section_range(sections, args.section, len(lines))
+        if not args.max_lines and not args.full:
+            check_section_length(
+                number,
+                args.section,
+                end - start + 1,
+                list_hint=f"{invocation()} sections {number}",
+                cap_hint="pass --max-lines",
+            )
     elif args.lines:
         match = re.fullmatch(r"(\d+):(\d+)?", args.lines.strip())
         if not match:
@@ -984,7 +1031,7 @@ def cmd_get(args: argparse.Namespace) -> int:
         start = int(match.group(1))
         end = int(match.group(2)) if match.group(2) else len(lines)
     else:
-        if not args.full:
+        if not (args.full or args.max_lines):
             check_whole_document(
                 number,
                 len(lines),
@@ -992,6 +1039,9 @@ def cmd_get(args: argparse.Namespace) -> int:
                 override_hint="--full",
             )
         start, end = 1, len(lines)
+
+    if args.max_lines:
+        end = min(end, start + args.max_lines - 1)
 
     body = slice_lines(lines, start, end, args.raw)
     payload = {
@@ -1057,9 +1107,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_get.add_argument("--section", help="section number (e.g. 6.1) or heading text")
     p_get.add_argument("--lines", help="line range START:END, for RFCs without headings")
     p_get.add_argument(
+        "--max-lines", type=int, help="cap how many lines come back, from wherever the read starts"
+    )
+    p_get.add_argument(
         "--full",
         action="store_true",
-        help=f"read the whole document even past {WHOLE_DOCUMENT_LINE_LIMIT} lines",
+        help=(
+            f"read the whole document even past {WHOLE_DOCUMENT_LINE_LIMIT} lines, "
+            f"or a whole section past {SECTION_LINE_LIMIT}"
+        ),
     )
     p_get.add_argument("--raw", action="store_true", help="keep page headers and footers")
     add_read_flags(p_get)

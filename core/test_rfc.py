@@ -392,6 +392,37 @@ def test_a_long_rfc_refuses_and_says_how_to_scope_it():
     assert "--full" in message
 
 
+def test_an_ordinary_section_reads_without_complaint():
+    rfc.check_section_length(
+        9110, "10.2.3", rfc.SECTION_LINE_LIMIT, list_hint="ignored", cap_hint="ignored"
+    )
+
+
+def test_a_section_long_enough_to_cost_a_document_refuses():
+    """RFC 2616 section 13 is 1431 lines: under the whole-document limit, and
+    reached through a door that guard does not watch."""
+    with pytest.raises(rfc.RFCError) as excinfo:
+        rfc.check_section_length(
+            2616, "13", 1431, list_hint="rfc sections 2616", cap_hint="pass --max-lines"
+        )
+    message = str(excinfo.value)
+    assert "1431 lines" in message
+    assert "rfc sections 2616" in message
+    assert "--max-lines" in message
+
+
+def test_sections_report_how_long_they_are(document):
+    sections = {s["section"]: s for s in rfc.find_sections(document)}
+    # Section 1 spans its own heading plus subsection 1.1; 1.1 stops at its own
+    # boundary, so the parent is necessarily the longer of the two.
+    assert sections["1"]["lines"] > sections["1.1"]["lines"]
+    for section in sections.values():
+        start, end, _ = rfc.section_range(
+            list(sections.values()), section["section"], len(document)
+        )
+        assert section["lines"] == end - start + 1
+
+
 @pytest.fixture
 def long_document(tmp_path, monkeypatch, records):
     monkeypatch.setenv("RFC_MIRROR", str(tmp_path))
