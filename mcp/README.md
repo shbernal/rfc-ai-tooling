@@ -16,6 +16,13 @@ An MCP server for looking up IETF RFCs.
 No clone, no virtualenv, no path. That is the whole installation. Your client
 spawns the server on your machine and talks to it over stdin and stdout.
 
+A client showing the server as connected has not necessarily used it, and a
+model will happily answer an RFC question from memory instead. On Claude Desktop
+the per-server log records only the handshake, so it cannot tell you either way
+— [docs/desktop-verification.md][verify] says where the evidence actually is.
+
+[verify]: https://github.com/shbernal/rfc-ai-tooling/blob/main/docs/desktop-verification.md
+
 ## Tools
 
 | Tool | What it does |

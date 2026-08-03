@@ -8,7 +8,7 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
-## 0.2.0 — unreleased
+## 0.2.0 — 2026-08-03
 
 ### Added
 
@@ -62,6 +62,16 @@ code announces that something used to work differently.
   A module form (`python3 -m mcp_server_rfc.rfc`) would have been just as
   unrunnable there, and nothing observable from inside the process tells the two
   installs apart.
+
+### Documentation
+
+- **Where to check that a client actually called the tools**, in
+  `docs/desktop-verification.md`. A connected server that is never invoked looks
+  identical to a working one, and on Claude Desktop the per-server MCP log holds
+  only the handshake — it reports zero `tools/call` even when calls succeeded, so
+  reading it as proof of a bluffing model is a false negative. The evidence is in
+  `main.log`'s permission lines and, with full inputs and outputs, in the session
+  transcript.
 
 ### Skill
 
