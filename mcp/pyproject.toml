@@ -1,6 +1,6 @@
 [project]
 name = "mcp-server-rfc"
-version = "0.2.1"
+version = "0.2.2"
 description = "MCP server for looking up IETF RFCs, with obsolescence warnings and section-level reads"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from email.utils import formatdate
 from pathlib import Path
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 INDEX_URL = "https://www.rfc-editor.org/rfc-index.txt"
 RFC_URL = "https://www.rfc-editor.org/rfc/rfc{number}.txt"

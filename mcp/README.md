@@ -99,7 +99,8 @@ qualify. It does the same things with fewer moving parts and gives the agent
 ripgrep over the corpus:
 
 ```bash
-clawhub install @shbernal/rfc-lookup
+npx skills add shbernal/rfc-ai-tooling      # from the repo, into .claude/skills/
+clawhub install @shbernal/rfc-lookup        # or the last released version
 ```
 
 This server is for clients that give the model no shell of its own. Claude

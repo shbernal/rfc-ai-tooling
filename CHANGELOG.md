@@ -8,6 +8,22 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## 0.2.2 — 2026-08-03
+
+### Documentation
+
+- **Installing the skill straight from this repository is now the first option**,
+  via [`skills`](https://github.com/vercel-labs/skills): `npx skills add
+  shbernal/rfc-ai-tooling`. It takes the skill's name from `SKILL.md`'s
+  frontmatter rather than its path, so it lands at `.claude/skills/rfc-lookup/`
+  — the flat layout Claude Code scans — and does for free the flattening the
+  ClawHub route needs three commands to arrange. ClawHub remains the way to
+  install a *released* version; the repo route tracks `main`.
+
+- **The skillbarn instructions are gone.** Nothing replaced it as a vendoring
+  story: `skills` writes its own `skills-lock.json`, and ClawHub covers the
+  released-version case, so the third tool was a step without a job.
+
 ## 0.2.1 — 2026-08-03
 
 Both fixes come from driving the published 0.2.0 through Claude Desktop and

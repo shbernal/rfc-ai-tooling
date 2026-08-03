@@ -20,23 +20,28 @@ capability a hosted instance cannot have.
 
 ## Install the skill
 
-### Into one project
+### From this repository
 
-Use [skillbarn](https://www.npmjs.com/package/skillbarn), which vendors skills
-from a committed lockfile the way `node_modules` vendors packages:
+Use [`skills`](https://github.com/vercel-labs/skills), which installs straight
+from the repo:
 
 ```bash
-pnpm add -g skillbarn clawhub          # npm i -g works too; needs Node 22+
-skb init --dir .claude/skills          # omit for OpenClaw; it defaults to .agents/skills
-skb add @shbernal/rfc-lookup
+npx skills add shbernal/rfc-ai-tooling
 ```
 
-Commit `skillbarn.json` and `skillbarn.lock`; the skill tree itself is
-gitignored, and `skb install` restores exactly those bytes in a fresh clone.
-The `--dir` matters: `skb` flattens to `<dir>/rfc-lookup/`, which is the layout
-Claude Code can actually see — see below.
+It reads the skill's name from `SKILL.md`'s frontmatter rather than from where
+the file sits, so this lands at `.claude/skills/rfc-lookup/` — the flat layout
+Claude Code actually scans — even though the skill lives in `skill/` here. Add
+`-g` for `~/.claude/skills/` instead of the current project, `-a claude-code` to
+name the agent explicitly, and `-y` to skip the prompts. `--list` shows what a
+repo offers without installing it.
 
-### User-wide
+It writes a `skills-lock.json` recording the source and a content hash; commit
+it. There is no version pin in it, so this route tracks `main` — it gives you
+the current state of the repo, not the last released skill. For a released
+version, use ClawHub below.
+
+### From ClawHub
 
 ```bash
 clawhub install @shbernal/rfc-lookup
@@ -58,6 +63,9 @@ clawhub --workdir ~/.claude --dir skills install @shbernal/rfc-lookup
 mv ~/.claude/skills/@shbernal/rfc-lookup ~/.claude/skills/rfc-lookup
 rmdir ~/.claude/skills/@shbernal
 ```
+
+This is the flattening `npx skills add` does for you, which is the main reason
+to prefer it on Claude Code.
 
 Either route, that is the whole installation: the skill ships a single
 stdlib-only Python script, and there is nothing to `pip install`.
