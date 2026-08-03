@@ -392,23 +392,14 @@ def test_a_long_rfc_refuses_and_says_how_to_scope_it():
     assert "--full" in message
 
 
-def test_an_ordinary_section_reads_without_complaint():
-    rfc.check_section_length(
-        9110, "10.2.3", rfc.SECTION_LINE_LIMIT, list_hint="ignored", cap_hint="ignored"
-    )
-
-
-def test_a_section_long_enough_to_cost_a_document_refuses():
-    """RFC 2616 section 13 is 1431 lines: under the whole-document limit, and
-    reached through a door that guard does not watch."""
-    with pytest.raises(rfc.RFCError) as excinfo:
-        rfc.check_section_length(
-            2616, "13", 1431, list_hint="rfc sections 2616", cap_hint="pass --max-lines"
-        )
-    message = str(excinfo.value)
-    assert "1431 lines" in message
-    assert "rfc sections 2616" in message
-    assert "--max-lines" in message
+def test_a_named_section_is_never_refused_for_its_length(document):
+    """Naming a section is the caller scoping their read, however long it turns
+    out to be. RFC 2616 section 13 is 1431 lines and is the canonical example of
+    reading one section instead of a whole RFC; a guard that refuses it refuses
+    the thing the project is for. Length is reported, not enforced."""
+    sections = rfc.find_sections(document)
+    start, end, _ = rfc.section_range(sections, "1", len(document))
+    assert rfc.slice_lines(document, start, end, raw=False)
 
 
 def test_sections_report_how_long_they_are(document):

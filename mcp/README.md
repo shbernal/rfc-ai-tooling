@@ -31,12 +31,12 @@ the per-server log records only the handshake, so it cannot tell you either way
 | `list_sections` | An RFC's headings with line numbers — the cheap first call |
 | `get_rfc` | Read one section, or a line range |
 
-`get_rfc` refuses an unscoped read of an RFC over 1500 lines, and an uncapped
-read of a section over 1000, answering with its size and a pointer to
-`list_sections` rather than filling the context with a specification the model
-had one question about. `list_sections` reports each section's length so the
-choice can be made before the read, `max_lines` caps any read including a
-section, and `full=true` overrides both guards.
+`get_rfc` refuses an unscoped read of an RFC over 1500 lines, answering with its
+size and a pointer to `list_sections` rather than filling the context with a
+specification the model had one question about. `full=true` overrides it. A
+section you asked for by name is never refused: `list_sections` reports how long
+each one is, and `max_lines` caps any read, so the choice is informed rather
+than blocked.
 
 Every response carries a banner with the RFC's status and, when it applies, a
 warning that it has been superseded:

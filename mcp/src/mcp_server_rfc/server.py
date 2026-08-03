@@ -192,11 +192,10 @@ def list_sections(number: int) -> dict:
         "('Idempotent Methods') and includes that section's subsections. Asking for a "
         "long RFC with no section and no line range is an error naming its size, not a "
         "silent context-filling dump; pass full=true only when the entire text is "
-        "genuinely what you need, and the same applies to a section long enough to "
-        "cost what the whole RFC would. max_lines caps any read, including a section, "
-        "and is the way to take the first part of a long one. start_line is the "
-        "fallback for RFCs without numbered headings and cannot be combined with "
-        "section. Page headers "
+        "genuinely what you need. max_lines caps any read, including a section, and is "
+        "the way to take the first part of one that list_sections showed is long. "
+        "start_line is the fallback for RFCs without numbered headings and cannot be "
+        "combined with section. Page headers "
         "and footers are stripped. The response carries a banner naming the RFC's "
         "status and, if it has been superseded, what replaced it."
     ),
@@ -223,14 +222,6 @@ def get_rfc(
                 )
             sections = rfc.find_sections(lines)
             start, end, section_info = rfc.section_range(sections, section, len(lines))
-            if not (full or max_lines):
-                rfc.check_section_length(
-                    number,
-                    section,
-                    end - start + 1,
-                    list_hint=f"list_sections({number})",
-                    cap_hint="pass max_lines",
-                )
         else:
             if not (full or start_line or max_lines):
                 rfc.check_whole_document(

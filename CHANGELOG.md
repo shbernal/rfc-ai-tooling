@@ -8,6 +8,26 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## 0.2.3 — 2026-08-03
+
+### Fixed
+
+- **A section you name is never refused for its length again.** 0.2.1 added a
+  guard refusing an uncapped read of a section over 1000 lines. RFC 2616's
+  section 13 is 1431 lines and is *the* canonical example of reading one section
+  instead of a whole RFC — it is the case `smoke.py` has always used to prove the
+  project works — so the guard refused the thing the project is for. `get_rfc`
+  returned an error where 0.2.0 returned the caching model, and with it went the
+  obsolescence banner.
+
+  The whole-document guard deliberately leaves named sections alone, on the
+  grounds that naming one *is* the scoping, and that was right. What 0.2.1 got
+  right is kept: `list_sections` reports how long each section is, and
+  `max_lines` caps any read. The choice is informed rather than blocked.
+
+  **If you are on 0.2.1 or 0.2.2, upgrade.** Both refuse
+  `get_rfc(2616, section="13")` and every other section past 1000 lines.
+
 ## 0.2.2 — 2026-08-03
 
 ### Documentation

@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from email.utils import formatdate
 from pathlib import Path
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 INDEX_URL = "https://www.rfc-editor.org/rfc-index.txt"
 RFC_URL = "https://www.rfc-editor.org/rfc/rfc{number}.txt"
@@ -52,10 +52,6 @@ INDEX_TTL_SECONDS = 7 * 24 * 60 * 60
 # surfaces advise reading one section, and advice is the weaker half of a
 # guardrail — this is the half that holds when the advice is skipped.
 WHOLE_DOCUMENT_LINE_LIMIT = 1500
-# A section this long is a document inside a document, and every RFC that has
-# one also has subsections to reach instead. Lower than the whole-document limit
-# because a section is already meant to be the scoped read.
-SECTION_LINE_LIMIT = 1000
 # Enough documents that full-text search is worth offering. A handful of
 # on-demand fetches accumulating in the mirror should not look like a sync.
 POPULATED_THRESHOLD = 1000
@@ -562,27 +558,6 @@ def check_whole_document(
     )
 
 
-def check_section_length(
-    number: int, section: str, span: int, *, list_hint: str, cap_hint: str
-) -> None:
-    """Refuse an uncapped read of a very long section.
-
-    Naming a section is normally the caller scoping their read, which is why
-    `check_whole_document` deliberately leaves it alone. The exception is a
-    section long enough that reading it costs what reading the RFC would have:
-    that is the same failure the whole-document guard exists to catch, reached
-    through a door it does not watch.
-    """
-    if span <= SECTION_LINE_LIMIT:
-        return
-    raise RFCError(
-        f"section {section} of RFC {number} is {span} lines — long enough that "
-        f"reading it whole is the cost the section guard exists to avoid. Run "
-        f"`{list_hint}` and read one of its subsections, or {cap_hint} to take "
-        f"the first part of it."
-    )
-
-
 def slice_lines(lines: list[str], start: int, end: int, raw: bool) -> str:
     """Extract 1-based inclusive lines, dropping page furniture unless raw."""
     start = max(1, start)
@@ -1016,14 +991,6 @@ def cmd_get(args: argparse.Namespace) -> int:
             )
         sections = find_sections(lines)
         start, end, section_info = section_range(sections, args.section, len(lines))
-        if not args.max_lines and not args.full:
-            check_section_length(
-                number,
-                args.section,
-                end - start + 1,
-                list_hint=f"{invocation()} sections {number}",
-                cap_hint="pass --max-lines",
-            )
     elif args.lines:
         match = re.fullmatch(r"(\d+):(\d+)?", args.lines.strip())
         if not match:
@@ -1112,10 +1079,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_get.add_argument(
         "--full",
         action="store_true",
-        help=(
-            f"read the whole document even past {WHOLE_DOCUMENT_LINE_LIMIT} lines, "
-            f"or a whole section past {SECTION_LINE_LIMIT}"
-        ),
+        help=f"read the whole document even past {WHOLE_DOCUMENT_LINE_LIMIT} lines",
     )
     p_get.add_argument("--raw", action="store_true", help="keep page headers and footers")
     add_read_flags(p_get)
