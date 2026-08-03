@@ -13,7 +13,8 @@ An MCP server for looking up IETF RFCs.
 }
 ```
 
-No clone, no virtualenv, no path. That is the whole installation.
+No clone, no virtualenv, no path. That is the whole installation. Your client
+spawns the server on your machine and talks to it over stdin and stdout.
 
 ## Tools
 
@@ -54,17 +55,41 @@ a person's decision, not a model's.
 If a mirror already exists — synced for the companion skill, say — this server
 picks it up automatically. Set `$RFC_MIRROR` to point at a non-default location.
 
+## HTTP mode
+
+The config above is the stdio transport, which needs a client that can spawn a
+process on your machine. A session running in the cloud — claude.ai on the web,
+Cowork — cannot, and no configuration fixes that. For those, the server has to
+be deployed somewhere they can reach:
+
+```bash
+mcp-server-rfc --transport http --host 0.0.0.0 --port 8080
+```
+
+`RFC_TRANSPORT`, `HOST` and `PORT` are read from the environment too. The
+repository carries a `Dockerfile` and a `fly.toml` that do this. **No public
+instance of this server exists and none is planned** — if you want one, you host
+it, and you should put authentication in front of it, since the server has none
+and would otherwise be an open proxy to a volunteer-run mirror.
+
+Full-text search is the one thing that does not survive: it reads a local 512 MB
+corpus, so a hosted instance returns an error saying so instead of silently
+answering a title search. The obsolescence banner, section reads and the
+unscoped-read guard all work, because they need only the 2 MB index.
+
 ## If your client has a shell
 
-Use the skill instead. It does the same things with fewer moving parts and gives
-the agent ripgrep over the corpus:
+Use the skill instead — Claude Code, Codex CLI, OpenClaw, Cursor and Zed all
+qualify. It does the same things with fewer moving parts and gives the agent
+ripgrep over the corpus:
 
 ```bash
 clawhub install @shbernal/rfc-lookup
 ```
 
-This server exists for clients that cannot run shell commands — claude.ai on the
-web, Claude Desktop, Cursor, Zed.
+This server is for clients that give the model no shell of its own. Claude
+Desktop is the clearest case: its chat cannot run a command on your machine, but
+it will spawn this server there.
 
 Source, issues and the skill: https://github.com/shbernal/rfc-ai-tooling
 

@@ -10,6 +10,26 @@ code announces that something used to work differently.
 
 ## 0.2.0 — unreleased
 
+### Added
+
+- **An HTTP transport, for clients that cannot spawn a local process.**
+  `mcp-server-rfc --transport http` serves Streamable HTTP instead of stdio;
+  `RFC_TRANSPORT`, `HOST` and `PORT` configure the same thing from the
+  environment. Sessions are stateless, so an instance can scale to zero and
+  back. stdio remains the default and is unchanged — no existing client
+  configuration needs to move.
+
+  This exists because a session running in Anthropic's cloud — claude.ai on the
+  web, Cowork — has no route to a process on your machine, so the stdio server
+  could never reach it. **No public instance is hosted and none is planned**; a
+  `Dockerfile` and a `fly.toml` ship in `mcp/` so that anyone who wants one can
+  deploy it themselves. The server has no authentication, which is a deliberate
+  omission for a local stdio process and a hazard for a public URL.
+
+  Full-text search is unavailable over HTTP unless the host has synced a mirror,
+  and says so rather than falling back to a title search. Everything else
+  behaves identically: the index it needs is 2 MB and is fetched on demand.
+
 ### Breaking
 
 - **Reading a whole RFC over 1500 lines is now an error rather than a dump.**

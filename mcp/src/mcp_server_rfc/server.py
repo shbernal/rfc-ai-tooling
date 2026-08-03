@@ -7,6 +7,7 @@ would eventually disagree about.
 
 from __future__ import annotations
 
+import argparse
 import logging
 import os
 import sys
@@ -44,6 +45,12 @@ READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=True)
 
 _index: dict[int, rfc.Record] | None = None
 
+# Set by main(). Only affects what the no-mirror refusal says: under stdio the
+# client spawned this process, so "run sync" is advice the reader can act on.
+# Over HTTP the server may be someone else's machine, and telling a user of a
+# hosted instance to sync it is advice that cannot be followed.
+_over_http = False
+
 
 def _mirror():
     return rfc.resolve_mirror()
@@ -63,6 +70,25 @@ def _index_records() -> dict[int, rfc.Record]:
 
 def _fail(message: str) -> dict:
     return {"error": message}
+
+
+def _no_mirror_message() -> str:
+    where = (
+        "There is no RFC mirror on the machine running this server. It is "
+        "answering over HTTP, so that machine may not be yours: if it is, run "
+        f"`{rfc.invocation()} sync` there; if it is not, full-text search is "
+        "unavailable on this instance and there is nothing to install."
+        if _over_http
+        else "Full-text search needs a local RFC mirror, which is not present. "
+        "The user can create one by running "
+        f"`{rfc.invocation()} sync` in a shell, in the environment this "
+        "server is installed in (512 MB, a few minutes)."
+    )
+    return (
+        f"{where} Searching titles instead would answer a different question, "
+        "so this is an error rather than a fallback. Retry with scope='title' "
+        "if a title search is what you want."
+    )
 
 
 @server.tool(
@@ -85,15 +111,7 @@ def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
     try:
         if scope == "fulltext":
             if not rfc.is_populated(mirror):
-                return _fail(
-                    "Full-text search needs a local RFC mirror, which is not present. "
-                    "The user can create one by running "
-                    f"`{rfc.invocation()} sync` in a shell, in the environment this "
-                    "server is installed in (512 MB, a few minutes). Searching "
-                    "titles instead would answer a "
-                    "different question, so this is an error rather than a fallback. "
-                    "Retry with scope='title' if a title search is what you want."
-                )
+                return _fail(_no_mirror_message())
             results, _, total = rfc.search_fulltext(mirror, query, limit)
             records = rfc.load_index(mirror, offline_only=True)
             for result in results:
@@ -204,9 +222,62 @@ def get_rfc(
         return _fail(str(exc))
 
 
+def build_parser() -> argparse.ArgumentParser:
+    """Flags for the HTTP mode only; stdio needs none and stays the default.
+
+    Every flag also reads an environment variable, because the deployment
+    targets that would use HTTP set configuration that way and not by editing a
+    command line. `PORT` and `HOST` are spelled the way platforms spell them.
+    """
+    parser = argparse.ArgumentParser(
+        prog="mcp-server-rfc",
+        description="MCP server for looking up IETF RFCs.",
+    )
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "http"),
+        default=os.environ.get("RFC_TRANSPORT", "stdio"),
+        help="stdio (default) for a client that spawns this process; http to serve it",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.environ.get("HOST", "127.0.0.1"),
+        help="http only; bind address (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("PORT", "8000")),
+        help="http only; bind port (default: 8000)",
+    )
+    return parser
+
+
 def main() -> None:
-    logger.info("mcp-server-rfc %s starting on stdio", rfc.__version__)
-    server.run("stdio")
+    args = build_parser().parse_args()
+
+    if args.transport == "stdio":
+        logger.info("mcp-server-rfc %s starting on stdio", rfc.__version__)
+        server.run("stdio")
+        return
+
+    global _over_http
+    _over_http = True
+    logger.info(
+        "mcp-server-rfc %s starting on http at http://%s:%s/mcp",
+        rfc.__version__,
+        args.host,
+        args.port,
+    )
+    # Stateless: no session to pin a client to one process, so this survives
+    # scale-to-zero and more than one instance. The index and any cached
+    # documents are per-process and are rebuilt on demand after a restart.
+    server.run(
+        "streamable-http",
+        host=args.host,
+        port=args.port,
+        stateless_http=True,
+    )
 
 
 if __name__ == "__main__":

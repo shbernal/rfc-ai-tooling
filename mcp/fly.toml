@@ -1,0 +1,34 @@
+# Deploy your own instance:
+#
+#   cd mcp && fly launch --copy-config --no-deploy && fly deploy
+#
+# `fly launch` rewrites `app` to a name that is free — app names are globally
+# unique, so the one below will not be available to you.
+app = "mcp-server-rfc"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  RFC_TRANSPORT = "http"
+  HOST = "0.0.0.0"
+  PORT = "8080"
+  RFC_MIRROR = "/tmp/rfc-mirror"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Nothing is kept between requests, so an idle instance can stop. A cold
+  # start re-fetches and re-parses the 2 MB index on the first tool call.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+# The parsed index is the memory floor: ~9,800 records held for the life of the
+# process. 512 MB is comfortable; 256 MB is not worth the risk of an OOM kill
+# in the middle of a tool call.
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

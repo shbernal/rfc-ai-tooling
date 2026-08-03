@@ -4,15 +4,19 @@ Two ways to give an AI agent working access to the IETF RFC corpus: a **skill**
 and an **MCP server**. They share one stdlib-only Python core and behave
 identically.
 
-**Use the skill.** It is a few files, needs no install step, and gives the agent
-the full shell — including `ripgrep` over the corpus — instead of a fixed set of
-tools. **Use the MCP server only if your client cannot run shell commands**:
-claude.ai on the web, Claude Desktop, Cursor, Zed. If your client has a shell
-(Claude Code, OpenClaw, Codex CLI, and most terminal agents), the skill is
-strictly the better surface.
+Which one you want depends on where your agent's tools actually run:
+
+| Your client | Use | Why |
+|---|---|---|
+| **Anything whose agent runs commands on your machine** — Claude Code, Codex CLI, OpenClaw, Cursor, Zed | the **skill** | It gives the agent the whole shell, including `ripgrep` over the corpus, instead of three fixed tools. No install step. |
+| **Claude Desktop** | the **MCP server over stdio** | A Desktop chat has no local shell, but Desktop does spawn MCP servers on your machine. This is the only one of the two surfaces that reaches your disk from there. |
+| **claude.ai on the web, Cowork, or anything running in the cloud** | the **MCP server over HTTP**, hosted by you | A cloud session cannot reach a process on your machine by any route. Neither surface works there until one of them is deployed somewhere it can reach — see below. |
+
+There is no public instance of this server, and nobody is running one for you.
 
 Both surfaces work with no setup, fetching RFCs on demand. Both gain full-text
-search across the whole corpus if you choose to sync a local mirror.
+search across the whole corpus if you sync a local mirror — which is the one
+capability a hosted instance cannot have.
 
 ## Install the skill
 
@@ -58,7 +62,7 @@ rmdir ~/.claude/skills/@shbernal
 Either route, that is the whole installation: the skill ships a single
 stdlib-only Python script, and there is nothing to `pip install`.
 
-## Install the MCP server
+## Install the MCP server (stdio)
 
 Add to your client's MCP configuration:
 
@@ -74,7 +78,47 @@ Add to your client's MCP configuration:
 ```
 
 There is no repository to clone and no virtualenv to create. `uvx` fetches the
-package from PyPI on first run.
+package from PyPI on first run. The client spawns the server as a child process
+on your machine and talks to it over stdin and stdout, which is why this route
+works in Claude Desktop, Cursor and Zed and cannot work from a cloud session.
+
+## Deploy the HTTP mode
+
+Cloud sessions connect outward to a URL. They cannot start a process on your
+computer, so reaching them means the server has to run somewhere they can reach
+— and somebody has to host it.
+
+**That somebody is not us.** No public instance exists and none is planned: a
+URL in a README is an availability promise, and this project deliberately has no
+infrastructure behind it. What ships instead is everything needed to run your
+own. The same binary serves both transports:
+
+```bash
+mcp-server-rfc --transport http --host 0.0.0.0 --port 8080
+```
+
+`RFC_TRANSPORT`, `HOST` and `PORT` are read from the environment as well, which
+is how the container configures itself. [`mcp/Dockerfile`](mcp/Dockerfile) and
+[`mcp/fly.toml`](mcp/fly.toml) are a working deployment of exactly that:
+
+```bash
+docker build -t mcp-server-rfc mcp/ && docker run --rm -p 8080:8080 mcp-server-rfc
+
+cd mcp && fly launch --copy-config --no-deploy && fly deploy   # or any container host
+```
+
+Then add `https://<your-app>/mcp` as a custom connector, which takes a Claude
+Pro, Max, Team or Enterprise plan.
+
+Two things worth knowing before you point the world at it. **There is no
+authentication**, so a public instance is an open proxy in front of a
+volunteer-run mirror — put it behind auth, or keep the URL to yourself. And
+**full-text search does not survive the trip**: it reads a 512 MB corpus off
+local disk and a hosted instance has none, so it returns an error saying so
+rather than quietly answering a title search instead. Everything else is
+identical — section reads, the section list, the unscoped-read guard, and the
+obsolescence banner that is the point of the project — because all of it needs
+only the 2 MB index the server fetches on demand.
 
 ## What it does
 
