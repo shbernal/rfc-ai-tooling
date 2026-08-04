@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from email.utils import formatdate
 from pathlib import Path
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 
 INDEX_URL = "https://www.rfc-editor.org/rfc-index.txt"
 RFC_URL = "https://www.rfc-editor.org/rfc/rfc{number}.txt"
@@ -45,7 +45,17 @@ RSYNC_MODULE = "rsync.rfc-editor.org::rfcs-text-only/"
 # free to reclaim, so this lives under ~/.local/share rather than ~/.cache.
 DEFAULT_MIRROR = Path.home() / ".local" / "share" / "rfc-ai-tooling"
 
-INDEX_TTL_SECONDS = 7 * 24 * 60 * 60
+# How long the index is served without asking the RFC Editor whether it moved.
+# Revalidation is a conditional GET the CDN answers 304 to, so a refresh past
+# this costs a round trip rather than 2 MB, and a day is as fine-grained as the
+# corpus gets: RFCs publish in weekday batches at roughly one a day.
+INDEX_TTL_SECONDS = 24 * 60 * 60
+
+# When `status` calls the index stale, which is a different question from when
+# to refresh it. Refreshing is cheap and happens on a timer the user never sees;
+# this is the age at which an index has plausibly missed something they would
+# care about, and reaching it means a week with no working refresh at all.
+INDEX_STALE_SECONDS = 7 * 24 * 60 * 60
 # Where "just read the whole thing" stops being reasonable. Short RFCs are
 # cheap and refusing them would be pedantry; past roughly 20k tokens an
 # unscoped read stops being a document and becomes a context window. Both
@@ -368,6 +378,13 @@ def ensure_index(mirror: Path, ttl: int = INDEX_TTL_SECONDS, force: bool = False
     because RFC 9110 gives If-None-Match precedence wherever both are present,
     which makes it free, and it would cover an index whose stored ETag was lost
     if the CDN ever starts emitting one.
+
+    A refresh that cannot reach the network is not a failure when an index is
+    already on disk. A day-old copy answers nearly every question a current one
+    does, and refusing to search because a revalidation timed out is far worse
+    than answering from it. The mtime is deliberately left alone in that case,
+    so `status` reports the real age and the next call tries again rather than
+    treating the failure as a successful refresh.
     """
     path = index_path(mirror)
     etag_path = mirror / ".rfc-index.etag"
@@ -382,12 +399,17 @@ def ensure_index(mirror: Path, ttl: int = INDEX_TTL_SECONDS, force: bool = False
     if path.exists() and etag_path.exists():
         known_etag = etag_path.read_text(encoding="utf-8").strip() or None
 
-    result = _fetch(
-        INDEX_URL,
-        if_modified_since=path.stat().st_mtime if path.exists() else None,
-        etag=known_etag,
-        want_etag=True,
-    )
+    try:
+        result = _fetch(
+            INDEX_URL,
+            if_modified_since=path.stat().st_mtime if path.exists() else None,
+            etag=known_etag,
+            want_etag=True,
+        )
+    except RFCError:
+        if not path.exists():
+            raise  # Nothing to fall back to; the caller has to hear about it.
+        return path
     data, etag = result  # type: ignore[misc]
 
     if data is None:
@@ -813,7 +835,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     if path.exists():
         age = time.time() - path.stat().st_mtime
         index_info["age_seconds"] = int(age)
-        index_info["stale"] = age > INDEX_TTL_SECONDS
+        index_info["stale"] = age > INDEX_STALE_SECONDS
         try:
             entries = len(parse_index(path.read_text(encoding="utf-8", errors="replace")))
         except OSError:

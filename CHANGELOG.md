@@ -8,6 +8,45 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## 0.2.4 — unreleased
+
+### Fixed
+
+- **A network blip no longer turns a readable index into an error.** Once the
+  index aged past its TTL, refreshing it was mandatory: a failed revalidation
+  raised out of `ensure_index`, so `search` and `find` reported a network error
+  while a perfectly good index sat on disk. `get` survived but dropped the
+  obsolescence banner — the one thing the tool adds over reading the document
+  directly — because its fallback treats a missing index and an unreachable one
+  the same way.
+
+  A refresh that cannot reach the network now serves the index on disk. The
+  file's mtime is deliberately not touched, so `status` still reports its true
+  age and the next call retries rather than recording the failure as a refresh.
+  With no index on disk there is nothing to fall back to and the error still
+  surfaces.
+
+### Changed
+
+- **The index refreshes daily instead of weekly.** `INDEX_TTL_SECONDS` drops
+  from 7 days to 24 hours. It was a week because revalidation did not work:
+  the RFC Editor's CDN answered every conditional GET with 200 and the full
+  2 MB, so the TTL was the only thing keeping refresh traffic down. As of
+  2026-08-03 it honours `If-None-Match` (ietf-tools/red#475), so a refresh that
+  finds nothing new is a header exchange. A week was long enough for the
+  obsolescence banner to be confidently wrong about a document; a day is as
+  fine-grained as the corpus gets, since RFCs publish in weekday batches.
+
+  Nothing to do to get the old cadence — pass a different `ttl` to
+  `ensure_index` if you are calling it directly.
+
+- **`status` no longer reuses the refresh interval to decide what is stale.**
+  These are separate questions, and answering both with one number meant
+  tightening the refresh cadence would relabel a two-day-old index as stale
+  when it is fine. The warning threshold moves to `INDEX_STALE_SECONDS` and
+  stays at 7 days, so `status` reports staleness exactly as it did in 0.2.3.
+  Reaching it now means a week with no working refresh at all.
+
 ## 0.2.3 — 2026-08-03
 
 ### Fixed

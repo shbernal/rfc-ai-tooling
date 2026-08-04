@@ -564,6 +564,78 @@ def test_not_modified_response_just_resets_the_clock(tmp_path, monkeypatch):
     assert rfc.time.time() - path.stat().st_mtime < rfc.INDEX_TTL_SECONDS
 
 
+def test_an_unreachable_refresh_falls_back_to_the_index_on_disk(tmp_path, monkeypatch):
+    """A network blip must not turn a readable index into an error."""
+    import os
+
+    path = tmp_path / "rfc-index.txt"
+    path.write_text(INDEX_EXCERPT)
+    stale = rfc.time.time() - rfc.INDEX_TTL_SECONDS - 1
+    os.utime(path, (stale, stale))
+
+    def offline(*args, **kwargs):
+        raise rfc.RFCError("network error fetching ...: [Errno -3] no name resolution")
+
+    monkeypatch.setattr(rfc, "_fetch", offline)
+    assert rfc.ensure_index(tmp_path) == path
+    assert path.read_text() == INDEX_EXCERPT
+    # Searching still works, and the obsolescence banner survives.
+    assert rfc.load_index(tmp_path)
+    assert rfc._header_for(tmp_path, 2616) != "RFC 2616"
+
+
+def test_a_failed_refresh_does_not_count_as_a_refresh(tmp_path, monkeypatch):
+    """Touching on failure would hide the real age and suppress the retry."""
+    import os
+
+    path = tmp_path / "rfc-index.txt"
+    path.write_text(INDEX_EXCERPT)
+    stale = rfc.time.time() - rfc.INDEX_TTL_SECONDS - 1
+    os.utime(path, (stale, stale))
+
+    calls = []
+
+    def offline(*args, **kwargs):
+        calls.append(1)
+        raise rfc.RFCError("network error fetching ...: unreachable")
+
+    monkeypatch.setattr(rfc, "_fetch", offline)
+    rfc.ensure_index(tmp_path)
+    assert rfc.time.time() - path.stat().st_mtime > rfc.INDEX_TTL_SECONDS
+    rfc.ensure_index(tmp_path)
+    assert len(calls) == 2
+
+
+def test_an_unreachable_refresh_with_no_index_still_raises(tmp_path, monkeypatch):
+    """With nothing on disk there is no fallback, so the error has to surface."""
+
+    def offline(*args, **kwargs):
+        raise rfc.RFCError("network error fetching ...: unreachable")
+
+    monkeypatch.setattr(rfc, "_fetch", offline)
+    with pytest.raises(rfc.RFCError):
+        rfc.ensure_index(tmp_path)
+
+
+def test_refresh_cadence_and_the_staleness_warning_are_separate(tmp_path, capsys):
+    """Refreshing daily must not make `status` call a two-day-old index stale."""
+    import argparse
+    import json
+    import os
+
+    assert rfc.INDEX_TTL_SECONDS < rfc.INDEX_STALE_SECONDS
+
+    path = tmp_path / "rfc-index.txt"
+    path.write_text(INDEX_EXCERPT)
+    aged = rfc.time.time() - 2 * rfc.INDEX_TTL_SECONDS
+    os.utime(path, (aged, aged))
+
+    rfc.cmd_status(argparse.Namespace(mirror=str(tmp_path), json=True))
+    index_info = json.loads(capsys.readouterr().out)["index"]
+    assert index_info["age_seconds"] > rfc.INDEX_TTL_SECONDS
+    assert index_info["stale"] is False
+
+
 # --------------------------------------------------------------------------
 # Live checks — excluded from CI
 # --------------------------------------------------------------------------
