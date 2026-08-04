@@ -21,7 +21,10 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - name: Run tests
         # Network-marked tests are excluded by the addopts in pyproject.toml.
-        run: uv run --python ${{ matrix.python }} --with pytest --no-project pytest -q
+        # --with mcp is not optional under --no-project: mcp/tests imports the
+        # SDK, and without it installed `import mcp` silently resolves to this
+        # repo's mcp/ directory as an empty namespace package.
+        run: uv run --python ${{ matrix.python }} --with pytest --with mcp --no-project pytest -q
 
   lint:
     runs-on: ubuntu-latest
@@ -47,3 +50,14 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - run: uv build
         working-directory: mcp
+
+  smoke:
+    # A real stdio JSON-RPC session against the working tree. The unit tests
+    # call the tool functions directly; this is the only job that proves the
+    # protocol layer between a client and them still works. It hits the RFC
+    # Editor, which is why it is a job of its own and not part of `test`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - run: uv run --with mcp --no-project make smoke-local

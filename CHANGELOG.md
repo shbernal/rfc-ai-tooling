@@ -8,9 +8,30 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
-## 0.2.4 — unreleased
+## 0.2.4 — 2026-08-04
 
 ### Fixed
+
+- **The MCP server no longer pins itself to the first index it loaded.** It
+  held the parsed index in a module global for the life of the process, which
+  quietly cancelled two things the core does on purpose. `INDEX_TTL_SECONDS`
+  never fired, so a long-running server — the HTTP deployment especially —
+  answered from whatever it read at startup and reported RFCs published since
+  then as nonexistent. And the offline fallback directly above was defeated:
+  its whole design is to leave the mtime alone so the *next* call retries, and
+  a first call made during an outage meant there was no next call.
+
+  `load_index` now reuses its previous parse only while the index file on disk
+  is unchanged, keyed on its path, mtime and size. The server holds no index
+  state at all, and repeated calls cost a `stat`.
+
+- **`list_sections` and `get_rfc` no longer fail when the index is
+  unreachable.** Both looked the header up in a way that propagated the
+  error, so an unfetchable index took the document with it — even though
+  retrieval never consults the index and the text fetches perfectly well. They
+  now use the same best-effort banner the CLI does, degrading to `RFC <n>`.
+  This is what `core/rfc.py`'s `header_for` was already for; it is public
+  under that name now rather than private under `_header_for`.
 
 - **A network blip no longer turns a readable index into an error.** Once the
   index aged past its TTL, refreshing it was mandatory: a failed revalidation

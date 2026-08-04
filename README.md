@@ -234,7 +234,8 @@ lets the skill be self-contained and keeps the MCP server's only dependency the
 make sync-core   # copy core/rfc.py into both surfaces
 make test        # pytest, no network
 make lint        # ruff check + format --check
-make smoke       # stdio JSON-RPC session against the published PyPI server
+make smoke-local # stdio JSON-RPC session against the working tree
+make smoke       # the same session against the published PyPI server
 ```
 
 `make test`, `make lint` and `make format` run through [uv](https://docs.astral.sh/uv/),

@@ -58,8 +58,6 @@ server = MCPServer(
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=True)
 
-_index: dict[int, rfc.Record] | None = None
-
 # Set by main(). Only affects what the no-mirror refusal says: under stdio the
 # client spawned this process, so "run sync" is advice the reader can act on.
 # Over HTTP the server may be someone else's machine, and telling a user of a
@@ -69,18 +67,6 @@ _over_http = False
 
 def _mirror():
     return rfc.resolve_mirror()
-
-
-def _index_records() -> dict[int, rfc.Record]:
-    """Load the index on first use and keep it.
-
-    Not loaded at startup: a client that connects and asks nothing should not
-    pay for parsing 2 MB.
-    """
-    global _index
-    if _index is None:
-        _index = rfc.load_index(_mirror())
-    return _index
 
 
 def _fail(message: str) -> dict:
@@ -142,7 +128,7 @@ def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
                 "results": results,
             }
 
-        hits, total = rfc.search_titles(_index_records(), query, limit)
+        hits, total = rfc.search_titles(rfc.load_index(mirror), query, limit)
         return {
             "query": query,
             "scope": scope,
@@ -172,10 +158,9 @@ def list_sections(number: int) -> dict:
     mirror = _mirror()
     try:
         lines = rfc.split_lines(rfc.read_document(mirror, number))
-        record = _index_records().get(number)
         return {
             "number": number,
-            "header": record.header() if record else f"RFC {number}",
+            "header": rfc.header_for(mirror, number),
             "total_lines": len(lines),
             "sections": rfc.find_sections(lines),
         }
@@ -210,8 +195,7 @@ def get_rfc(
     mirror = _mirror()
     try:
         lines = rfc.split_lines(rfc.read_document(mirror, number))
-        record = _index_records().get(number)
-        header = record.header() if record else f"RFC {number}"
+        header = rfc.header_for(mirror, number)
 
         section_info = None
         if section:

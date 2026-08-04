@@ -581,7 +581,7 @@ def test_an_unreachable_refresh_falls_back_to_the_index_on_disk(tmp_path, monkey
     assert path.read_text() == INDEX_EXCERPT
     # Searching still works, and the obsolescence banner survives.
     assert rfc.load_index(tmp_path)
-    assert rfc._header_for(tmp_path, 2616) != "RFC 2616"
+    assert rfc.header_for(tmp_path, 2616) != "RFC 2616"
 
 
 def test_a_failed_refresh_does_not_count_as_a_refresh(tmp_path, monkeypatch):

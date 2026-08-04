@@ -426,7 +426,27 @@ def ensure_index(mirror: Path, ttl: int = INDEX_TTL_SECONDS, force: bool = False
     return path
 
 
+# The last parse, kept against the identity of the file it came from. Callers
+# never mutate what parse_index returns — every write to a Record happens while
+# parse_index is still building it — so one dict can be shared.
+_index_cache: tuple[tuple[str, int, int], dict[int, Record]] | None = None
+
+
 def load_index(mirror: Path, offline_only: bool = False) -> dict[int, Record]:
+    """Parse the index, reusing the previous parse while the file on disk is unchanged.
+
+    The key is the file's identity, not the fact that a parse has happened. A
+    caller that memoized the records themselves would pin its whole process to
+    whatever the first call loaded — it would never see a refresh past the TTL,
+    and a first call made during an outage would serve the fallback copy for as
+    long as it ran. ensure_index leaves the mtime alone precisely so the next
+    call retries; caching the records is what turns "the next call" into never.
+
+    Size is in the key alongside mtime because a filesystem with coarse
+    timestamps could otherwise miss a rewrite that lands in the same tick as
+    the parse before it. The index only grows, so the pair separates them.
+    """
+    global _index_cache
     path = index_path(mirror)
     if not offline_only:
         path = ensure_index(mirror)
@@ -435,7 +455,13 @@ def load_index(mirror: Path, offline_only: bool = False) -> dict[int, Record]:
             f"no RFC index at {path}. Run `{invocation()} status` while online to "
             f"fetch it, or `{invocation()} sync` for the full corpus."
         )
-    return parse_index(path.read_text(encoding="utf-8", errors="replace"))
+    stat = path.stat()
+    key = (str(path), stat.st_mtime_ns, stat.st_size)
+    if _index_cache is not None and _index_cache[0] == key:
+        return _index_cache[1]
+    records = parse_index(path.read_text(encoding="utf-8", errors="replace"))
+    _index_cache = (key, records)
+    return records
 
 
 def read_document(mirror: Path, number: int) -> str:
@@ -969,7 +995,7 @@ def cmd_sections(args: argparse.Namespace) -> int:
     number = parse_number(args.number)
     lines = split_lines(read_document(mirror, number))
     sections = find_sections(lines)
-    header = _header_for(mirror, number)
+    header = header_for(mirror, number)
     human = [header]
     if sections:
         human += [
@@ -987,7 +1013,7 @@ def cmd_sections(args: argparse.Namespace) -> int:
     return 0
 
 
-def _header_for(mirror: Path, number: int) -> str:
+def header_for(mirror: Path, number: int) -> str:
     """Best-effort banner.
 
     Worth fetching the index for if it is missing, because the obsolescence
@@ -1005,7 +1031,7 @@ def cmd_get(args: argparse.Namespace) -> int:
     mirror = resolve_mirror(args.mirror)
     number = parse_number(args.number)
     lines = split_lines(read_document(mirror, number))
-    header = _header_for(mirror, number)
+    header = header_for(mirror, number)
 
     section_info = None
     if args.section:

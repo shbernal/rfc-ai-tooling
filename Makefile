@@ -6,7 +6,7 @@ VENDORED := skill/scripts/rfc.py mcp/src/mcp_server_rfc/rfc.py
 # an environment you manage yourself: `make test RUN=` in an active venv.
 RUN ?= uv run
 
-.PHONY: sync-core check-vendor test lint format smoke
+.PHONY: sync-core check-vendor test lint format smoke smoke-local
 
 sync-core:
 	@for dest in $(VENDORED); do \
@@ -32,12 +32,24 @@ check-vendor:
 test:
 	$(RUN) pytest
 
-# The rest of this file proves the repository works. This proves the artifact
-# on PyPI works: a real stdio JSON-RPC session against whatever `uvx
-# mcp-server-rfc` resolves. Hits the network, so it is not part of `make test`.
-# Run it after every release, and cold — a container, not a machine that has
-# ever held this repo. Pass a command to point it at the working tree instead:
-#   PYTHONPATH=mcp/src python3 mcp/smoke.py -- python3 -m mcp_server_rfc.server
+# The same JSON-RPC session against two different things, and the difference is
+# the point.
+#
+# smoke-local drives the working tree, so it can run before the tag. That
+# ordering matters: `smoke` can only ever test a version that is already
+# published, which is how 0.2.1's section-guard regression reached PyPI before
+# anything ran the call that would have caught it. Run this before every
+# release, and on pull requests.
+#
+# smoke proves the *artifact*: entry point, wheel contents, metadata, and
+# dependency resolution, none of which the working tree can vouch for. It is a
+# release step, and it runs cold — a container, not a machine that has ever
+# held this repo, because a warm ~/.cache/uv invalidates the result.
+#
+# Both hit the network, so neither is part of `make test`.
+smoke-local:
+	PYTHONPATH=mcp/src python3 mcp/smoke.py -- python3 -m mcp_server_rfc.server
+
 smoke:
 	python3 mcp/smoke.py
 

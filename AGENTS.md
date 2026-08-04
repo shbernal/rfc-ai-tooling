@@ -32,7 +32,8 @@ make test          # pytest, no network (network-marked tests are excluded)
 make lint          # ruff check + format --check
 make format        # ruff format .
 make check-vendor  # verify vendored copies match core/rfc.py
-make smoke         # drive the *published* PyPI server over real stdio JSON-RPC
+make smoke-local   # stdio JSON-RPC session against the *working tree*
+make smoke         # the same session against the *published* PyPI server
 ```
 
 Run `make sync-core lint test` before committing any change to `core/rfc.py`.
@@ -42,10 +43,18 @@ through `uv run`, which syncs the environment on demand — no activated venv
 required. `make test RUN=` calls the bare commands instead, for an environment
 you manage yourself.
 
-`make smoke` is the only target that tests something other than this working
-tree, so it is a release step, not a development one. Run it cold — inside a
-container, on a filesystem that has never held this repo — because a warm
-`~/.cache/uv` or a leftover mirror invalidates the result:
+Both smoke targets hit the network, so neither is in `make test`. They answer
+different questions and CI runs `smoke-local` on every pull request:
+
+- **`make smoke-local`** drives the working tree, so it can run *before* the
+  tag. That ordering is the point — `make smoke` can only test a version that
+  is already published, which is how 0.2.1's section-guard regression reached
+  PyPI before anything ran the call that would have caught it.
+- **`make smoke`** proves the artifact: entry point, wheel contents, metadata
+  and dependency resolution, none of which the working tree can vouch for. It
+  is a release step, and it runs cold — inside a container, on a filesystem
+  that has never held this repo — because a warm `~/.cache/uv` or a leftover
+  mirror invalidates the result:
 
 ```bash
 docker run --rm -i -v "$PWD/mcp/smoke.py:/smoke.py:ro" python:3.13-slim \
@@ -59,6 +68,13 @@ docker run --rm -i -v "$PWD/mcp/smoke.py:/smoke.py:ro" python:3.13-slim \
 - Tests live in `core/test_rfc.py` and run against fixtures in
   `core/fixtures/`, not live network calls. Tests marked `network` hit the
   real RFC Editor and are excluded from CI (`-m 'not network'`).
+- `mcp/tests/test_server.py` covers the adapter rather than the core, because
+  the two fail differently: the core is a library the CLI calls once per
+  process, while the server is long-lived and calls it repeatedly, so anything
+  the adapter holds between calls is state `core/test_rfc.py` cannot see. It
+  needs the `mcp` SDK, which is why CI installs it (`--with mcp`) — without it
+  `import mcp` resolves to this repo's `mcp/` directory as an empty namespace
+  package instead of failing.
 - No RFC text is bundled in either surface; the corpus is fetched from the RFC
   Editor on demand and optionally mirrored locally via `rfc sync`.
 
