@@ -20,6 +20,12 @@ By default it tests whatever `uvx mcp-server-rfc` resolves, which is the
 published wheel. Pass a different command to test a working tree instead:
 
     PYTHONPATH=mcp/src python3 mcp/smoke.py -- python3 -m mcp_server_rfc.server
+
+Pass --expect-version, always. "Whatever `uvx` resolves" is not the release you
+just cut until PyPI's simple index has propagated, and until then it is the
+*previous* one — against which every check below passes, reporting success for
+a version nobody was testing. That happened on the 0.2.4 release. Without the
+flag this script cannot tell you which version it proved, and says so.
 """
 
 from __future__ import annotations
@@ -142,6 +148,12 @@ def main() -> int:
         default=DEFAULT_COMMAND,
         help="server command (default: uvx mcp-server-rfc)",
     )
+    parser.add_argument(
+        "--expect-version",
+        metavar="VERSION",
+        help="fail unless serverInfo reports this version; without it the run "
+        "cannot say which version it proved",
+    )
     args = parser.parse_args()
     command = args.command or DEFAULT_COMMAND
 
@@ -171,6 +183,23 @@ def main() -> int:
             f"no serverInfo in {init}",
         )
         print(f"       serverInfo: {server_info}")
+
+        # Before anything else, because everything else is worthless if this is
+        # the wrong build. A freshly published version is not resolvable until
+        # the simple index propagates, and `uvx` quietly serves the previous
+        # release in the meantime.
+        reported = server_info.get("version", "")
+        if args.expect_version:
+            passed &= check(
+                f"serverInfo reports {args.expect_version}",
+                reported == args.expect_version,
+                f"resolved {reported or 'no version'} instead. Every check below "
+                "passes against the previous release, so a PASS here would be a "
+                "report about a version you are not shipping.",
+            )
+        else:
+            print("note which version this proves is unknown (pass --expect-version)")
+
         client.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
 
         listed = client.request(2, "tools/list")

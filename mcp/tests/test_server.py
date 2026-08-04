@@ -23,6 +23,21 @@ FIXTURES = Path(__file__).parents[2] / "core" / "fixtures"
 INDEX_EXCERPT = (FIXTURES / "rfc-index-excerpt.txt").read_text(encoding="utf-8")
 
 
+def test_the_packaged_version_is_the_one_the_server_reports():
+    """Two files declare a version and nothing else makes them agree.
+
+    The publish workflow checks the tag against mcp/pyproject.toml, so that
+    half cannot drift silently. Nothing checks it against core/rfc.py, which is
+    what serverInfo reports and what `--version` prints — so a bump that missed
+    one would upload a wheel whose server announces the previous release.
+    """
+    manifest = (Path(__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    packaged = next(
+        line.split('"')[1] for line in manifest.splitlines() if line.startswith("version = ")
+    )
+    assert rfc.__version__ == packaged
+
+
 @pytest.fixture(autouse=True)
 def isolated_mirror(tmp_path, monkeypatch):
     """Point every tool at an empty mirror and drop the core's parse cache.

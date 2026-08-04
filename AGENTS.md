@@ -57,9 +57,17 @@ different questions and CI runs `smoke-local` on every pull request:
   mirror invalidates the result:
 
 ```bash
-docker run --rm -i -v "$PWD/mcp/smoke.py:/smoke.py:ro" python:3.13-slim \
-  bash -c 'pip install -q uv && python3 /smoke.py'
+docker run --rm -i -v "$PWD/mcp/smoke.py:/smoke.py:ro" python:3.13-slim bash -c \
+  "pip install -q uv && python3 /smoke.py --expect-version $(make -s print-version)"
 ```
+
+`--expect-version` is not optional on a release run, which is why both `make`
+targets pass it and the recipe above derives it. A version is not resolvable
+the moment it is published — PyPI's simple index takes a few minutes — and
+until then `uvx mcp-server-rfc` serves the *previous* release, which passes
+every other check in the script. The 0.2.4 release was first reported green
+that way, against 0.2.3. Run `make smoke` until it agrees on the version
+rather than reading a PASS as done.
 
 ## Conventions
 
