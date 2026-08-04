@@ -373,11 +373,12 @@ def ensure_index(mirror: Path, ttl: int = INDEX_TTL_SECONDS, force: bool = False
     Revalidation sends both If-None-Match and If-Modified-Since. Since
     2026-08-03 the RFC Editor's CDN honours the first: handed back its own ETag
     it answers 304, so refreshing an index that has not changed costs a header
-    exchange rather than 2 MB. It still sends no Last-Modified, so
-    If-Modified-Since cannot produce a 304 on its own. It is sent anyway
-    because RFC 9110 gives If-None-Match precedence wherever both are present,
-    which makes it free, and it would cover an index whose stored ETag was lost
-    if the CDN ever starts emitting one.
+    exchange rather than 2 MB. It still sends no Last-Modified, and
+    ietf-tools/red#475 was closed on 2026-08-03 with that half explicitly
+    skipped, so do not expect If-Modified-Since to produce a 304 on its own. It
+    is sent anyway because RFC 9110 gives If-None-Match precedence wherever both
+    are present, which makes it free, and it would cover an index whose stored
+    ETag was lost if the CDN ever starts emitting one.
 
     A refresh that cannot reach the network is not a failure when an index is
     already on disk. A day-old copy answers nearly every question a current one
