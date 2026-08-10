@@ -17,7 +17,11 @@ jobs:
       - uses: astral-sh/setup-uv@v7
 
       - name: Index and documents still parse
-        run: uv run --with pytest --no-project pytest -q -m network
+        # --with mcp for the same reason test.yml needs it: pytest imports every
+        # module under testpaths before -m deselects anything, and without the
+        # SDK installed `import mcp` resolves to this repo's mcp/ directory as an
+        # empty namespace package.
+        run: uv run --with pytest --with mcp --no-project pytest -q -m network
 
       - name: rsync module is still named rfcs-text-only
         run: |
