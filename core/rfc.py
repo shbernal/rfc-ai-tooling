@@ -35,15 +35,11 @@ from dataclasses import dataclass, field
 from email.utils import formatdate
 from pathlib import Path
 
-__version__ = "0.2.4"
+__version__ = "0.3.0"
 
 INDEX_URL = "https://www.rfc-editor.org/rfc-index.txt"
 RFC_URL = "https://www.rfc-editor.org/rfc/rfc{number}.txt"
 RSYNC_MODULE = "rsync.rfc-editor.org::rfcs-text-only/"
-
-# 512 MB of RFC text is data the user asked for, not a cache a cleaner should be
-# free to reclaim, so this lives under ~/.local/share rather than ~/.cache.
-DEFAULT_MIRROR = Path.home() / ".local" / "share" / "rfc-ai-tooling"
 
 # How long the index is served without asking the RFC Editor whether it moved.
 # Revalidation is a conditional GET the CDN answers 304 to, so a refresh past
@@ -298,13 +294,36 @@ def _parse_record(joined: str) -> Record | None:
 # --------------------------------------------------------------------------
 
 
+# 512 MB of RFC text is data the user asked for, not a cache a cleaner should be
+# free to reclaim, so the corpus belongs in the platform's data directory rather
+# than its cache directory. Which directory that *is* is the environment's
+# answer to give, not ours: ~/.local/share is the fallback the XDG spec names
+# for when $XDG_DATA_HOME is unset, and hardcoding it overrides every user who
+# has already said where their data goes — a sandbox, a systemd unit, a home
+# directory on a small partition. Windows has no such path at all; there the
+# answer is %LOCALAPPDATA%, and specifically the local profile, because half a
+# gigabyte in the roaming one syncs to a domain controller at every logon.
+#
+# Computed on call rather than at import: Path.home() raises when there is no
+# passwd entry and no $HOME, which is the normal state of a container running
+# under an arbitrary UID. As a module constant it took the import down with it,
+# and took --mirror and $RFC_MIRROR with that, though either one would have
+# meant this function was never needed.
+def default_mirror() -> Path:
+    base = os.environ.get("LOCALAPPDATA" if os.name == "nt" else "XDG_DATA_HOME")
+    # The spec says to ignore a relative value rather than resolve it.
+    if base and os.path.isabs(base):
+        return Path(base) / "rfc-ai-tooling"
+    return Path.home() / ".local" / "share" / "rfc-ai-tooling"
+
+
 def resolve_mirror(override: str | None = None) -> Path:
     if override:
         return Path(override).expanduser()
     env = os.environ.get("RFC_MIRROR")
     if env:
         return Path(env).expanduser()
-    return DEFAULT_MIRROR
+    return default_mirror()
 
 
 def index_path(mirror: Path) -> Path:
@@ -1088,8 +1107,12 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    # Named rather than resolved: resolving here would call default_mirror() on
+    # every run just to build the help, which is the one thing it must not do
+    # when there is no home directory to find. `status` prints the live path.
     parser.add_argument(
-        "--mirror", help=f"corpus directory (default: $RFC_MIRROR or {DEFAULT_MIRROR})"
+        "--mirror",
+        help="corpus directory (default: $RFC_MIRROR, else the platform data directory)",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

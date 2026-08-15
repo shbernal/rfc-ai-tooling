@@ -153,8 +153,10 @@ with `--fulltext` results, and with `rg` or `sed` over the same file.
 
 ## Escape hatch
 
-With a synced mirror, the documents are plain text files in `$RFC_MIRROR` (or
-`~/.local/share/rfc-ai-tooling`). For anything the CLI does not cover, use
+With a synced mirror, the documents are plain text files in `$RFC_MIRROR`, or
+under the platform's data directory when that is unset —
+`$XDG_DATA_HOME/rfc-ai-tooling`, falling back to `~/.local/share/rfc-ai-tooling`.
+`status` prints the path in use. For anything the CLI does not cover, use
 ripgrep directly:
 
 ```bash

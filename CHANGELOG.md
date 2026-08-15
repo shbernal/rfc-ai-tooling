@@ -8,6 +8,44 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## 0.3.0 — 2026-08-15
+
+### Fixed
+
+- **The module imports under a UID with no home directory.** The default mirror
+  was a module-level constant, so `Path.home()` ran at import — and it raises
+  `RuntimeError` when there is neither a passwd entry nor `$HOME`, which is the
+  ordinary state of a container running as an arbitrary UID (`runAsUser` with
+  no matching passwd entry is the default on OpenShift and common in hardened
+  Kubernetes). `import rfc` failed there, and `--mirror` and `$RFC_MIRROR`
+  could not help: the constant was computed before either could be read. The
+  default is now computed on call, so both overrides work with no home
+  directory at all, and only a run that genuinely falls through to the default
+  still fails. The `--mirror` help text names the resolution order instead of
+  interpolating the resolved path, for the same reason.
+
+  `make smoke` could not have caught this — it runs as root, where `HOME=/root`
+  resolves.
+
+### Breaking
+
+- **The mirror now follows `$XDG_DATA_HOME`, and `%LOCALAPPDATA%` on Windows.**
+  `~/.local/share` is the fallback the XDG spec names for when `$XDG_DATA_HOME`
+  is unset; hardcoding it overrode everyone who had already said where their
+  data goes. Windows had no correct location at all — it got a `.local/share`
+  directory in the user profile that no backup or uninstall tool recognises —
+  and now uses the local profile, never the roaming one, which would sync half
+  a gigabyte of RFC text to a domain controller at every logon. A relative
+  value in either variable is ignored rather than resolved, as the spec says.
+
+  Anyone with `$XDG_DATA_HOME` set to a non-default location will find their
+  existing corpus where they left it but no longer looked for: `status` will
+  report no mirror and `--fulltext` will refuse. Either move the directory, or
+  set `RFC_MIRROR` to the old path — `$HOME/.local/share/rfc-ai-tooling` — to
+  keep it where it is. Unset, as it is on most machines, nothing moves.
+
+  `RFC_MIRROR` and `--mirror` are unchanged and still win over both.
+
 ## 0.2.4 — 2026-08-04
 
 ### Fixed

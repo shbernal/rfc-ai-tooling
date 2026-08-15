@@ -8,8 +8,10 @@ document of each generation is marked `network` and excluded from CI.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -247,7 +249,81 @@ def test_explicit_mirror_beats_the_environment(tmp_path, monkeypatch):
 def test_default_mirror_is_not_a_cache_directory(monkeypatch):
     """512 MB the user asked for should not sit where cache cleaners roam."""
     monkeypatch.delenv("RFC_MIRROR", raising=False)
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
     assert ".cache" not in str(rfc.resolve_mirror(None))
+
+
+def pretend_platform(monkeypatch, name):
+    """Give rfc a view of `os` reporting a chosen os.name.
+
+    Patching os.name itself would make Path() build a WindowsPath, which a
+    POSIX host cannot instantiate, so only rfc's own reference moves. Paths in
+    these tests stay POSIX-shaped for the same reason: os.path.isabs answers
+    for the host, so a real `C:\\...` would read as relative here and prove
+    nothing. What is under test is which variable gets read.
+    """
+    monkeypatch.setattr(rfc, "os", SimpleNamespace(name=name, environ=os.environ, path=os.path))
+
+
+def test_default_mirror_honours_the_data_directory_variable(monkeypatch):
+    monkeypatch.delenv("RFC_MIRROR", raising=False)
+    monkeypatch.setenv("XDG_DATA_HOME", "/data")
+    pretend_platform(monkeypatch, "posix")
+    assert rfc.resolve_mirror(None) == Path("/data/rfc-ai-tooling")
+
+
+def test_default_mirror_ignores_a_relative_data_directory(monkeypatch):
+    """The XDG spec says a relative value is invalid, not a path to resolve."""
+    monkeypatch.delenv("RFC_MIRROR", raising=False)
+    monkeypatch.setenv("XDG_DATA_HOME", "relative/data")
+    monkeypatch.setattr(rfc.Path, "home", classmethod(lambda cls: cls("/home/someone")))
+    pretend_platform(monkeypatch, "posix")
+    assert rfc.resolve_mirror(None) == Path("/home/someone/.local/share/rfc-ai-tooling")
+
+
+def test_default_mirror_uses_the_local_profile_on_windows(monkeypatch):
+    """Never the roaming profile: it syncs to a domain controller at logon."""
+    monkeypatch.delenv("RFC_MIRROR", raising=False)
+    monkeypatch.setenv("APPDATA", "/roaming")
+    monkeypatch.setenv("LOCALAPPDATA", "/local")
+    pretend_platform(monkeypatch, "nt")
+    assert rfc.resolve_mirror(None) == Path("/local/rfc-ai-tooling")
+
+
+def test_default_mirror_ignores_the_data_directory_variable_on_windows(monkeypatch):
+    """XDG_DATA_HOME is a POSIX convention; a stray one must not win there."""
+    monkeypatch.delenv("RFC_MIRROR", raising=False)
+    monkeypatch.setenv("XDG_DATA_HOME", "/xdg")
+    monkeypatch.setenv("LOCALAPPDATA", "/local")
+    pretend_platform(monkeypatch, "nt")
+    assert rfc.resolve_mirror(None) == Path("/local/rfc-ai-tooling")
+
+
+def test_an_explicit_mirror_needs_no_home_directory(monkeypatch):
+    """Path.home() raises under a UID with no passwd entry; --mirror must not care.
+
+    This is why the default is computed on call and never interpolated into the
+    parser's help: as a module constant it took the import down before either
+    override could be read.
+    """
+
+    def no_home(cls):
+        raise RuntimeError("Could not determine home directory.")
+
+    monkeypatch.delenv("RFC_MIRROR", raising=False)
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    monkeypatch.setattr(rfc.Path, "home", classmethod(no_home))
+    pretend_platform(monkeypatch, "posix")
+
+    assert rfc.resolve_mirror("/corpus") == Path("/corpus")
+    monkeypatch.setenv("RFC_MIRROR", "/from/env")
+    assert rfc.resolve_mirror(None) == Path("/from/env")
+    # And the parser must build without reaching for a home directory either.
+    assert rfc.build_parser().parse_args(["status"]).command == "status"
+
+    monkeypatch.delenv("RFC_MIRROR")
+    with pytest.raises(RuntimeError):
+        rfc.resolve_mirror(None)
 
 
 # --------------------------------------------------------------------------

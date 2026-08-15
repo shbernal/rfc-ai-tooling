@@ -68,7 +68,11 @@ expose a sync tool: half a gigabyte pulled from a volunteer-run mirror should be
 a person's decision, not a model's.
 
 If a mirror already exists — synced for the companion skill, say — this server
-picks it up automatically. Set `$RFC_MIRROR` to point at a non-default location.
+picks it up automatically. It looks under the platform's data directory:
+`$XDG_DATA_HOME/rfc-ai-tooling`, or `%LOCALAPPDATA%\rfc-ai-tooling` on Windows,
+falling back to `~/.local/share/rfc-ai-tooling`. Set `$RFC_MIRROR` to point at a
+non-default location — in a container with no home directory, that or `--mirror`
+is what to pass.
 
 ## HTTP mode
 

@@ -166,8 +166,10 @@ Windows without re-running it there.
 
 `read_document` caches every fetched RFC into the mirror directory, creating it
 if absent, and `ensure_index` writes or touches the index there. So a successful
-read **does** create `~/.local/share/rfc-ai-tooling`, and that is correct
-behaviour, not a leak.
+read **does** create the mirror directory, and that is correct behaviour, not a
+leak. The paths below spell out the fallback location; since 0.3.0 a machine
+with `$XDG_DATA_HOME` set resolves somewhere else, so run `status` and move the
+directory it names rather than the one written here.
 
 What must never happen is an *automatic full sync* — 512 MB pulled from a
 volunteer-run mirror without the user asking. The lazy-index assertion is
