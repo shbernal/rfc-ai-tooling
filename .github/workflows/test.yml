@@ -60,4 +60,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
-      - run: uv run --with mcp --no-project make smoke-local
+      # No --with mcp --no-project wrapper: the recipe runs the server through
+      # `uv run` itself now, which syncs the dev group the SDK is declared in.
+      # Wrapping it would nest one uv run inside another with the opposite
+      # answer about whether this is a project.
+      - run: make smoke-local

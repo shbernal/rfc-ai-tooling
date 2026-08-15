@@ -63,9 +63,16 @@ test:
 # core/rfc.py's __version__ drifting from the packaged one.
 #
 # Both hit the network, so neither is part of `make test`.
+#
+# Only the server half goes through $(RUN): it imports the mcp SDK, which is a
+# dev dependency rather than a system package, and a bare python3 that cannot
+# find it does not fail on the import — `import mcp` resolves to this repo's own
+# mcp/ directory as an empty namespace package, so the failure surfaces as
+# `No module named 'mcp.server'` from a server that has already been spawned.
+# smoke.py itself is stdlib-only and stays on the interpreter that ran make.
 smoke-local:
 	PYTHONPATH=mcp/src python3 mcp/smoke.py --expect-version $(VERSION) \
-	  -- python3 -m mcp_server_rfc.server
+	  -- $(RUN) python3 -m mcp_server_rfc.server
 
 smoke:
 	python3 mcp/smoke.py --expect-version $(VERSION)
