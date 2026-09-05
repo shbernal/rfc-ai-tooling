@@ -18,7 +18,10 @@ jobs:
         python: ["3.10", "3.13"]
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      # Pinned to an exact version, not @v10: setup-uv stopped publishing major
+      # and minor tags at v8, so @v10 does not resolve. Bumping it is a manual
+      # edit in every workflow here.
+      - uses: astral-sh/setup-uv@v10.0.1
       - name: Run tests
         # Network-marked tests are excluded by the addopts in pyproject.toml.
         # --with mcp is not optional under --no-project: mcp/tests imports the
@@ -30,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.0.1
       - run: uv run ruff check .
       - run: uv run ruff format --check .
 
@@ -47,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.0.1
       - run: uv build
         working-directory: mcp
 
@@ -59,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.0.1
       # No --with mcp --no-project wrapper: the recipe runs the server through
       # `uv run` itself now, which syncs the dev group the SDK is declared in.
       # Wrapping it would nest one uv run inside another with the opposite

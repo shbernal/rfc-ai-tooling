@@ -29,7 +29,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.0.1
 
       # The tag is the only thing a human types at release time, and nothing
       # else ties it to what actually gets uploaded: tagging v0.2.0 without
