@@ -61,9 +61,21 @@ def protocol_version() -> str:
 
 
 def mirror_path() -> Path:
+    """Where the server would put a mirror, restated because this file cannot
+    import rfc.py — it is piped into a container that has never held the repo.
+
+    Kept identical to resolve_mirror()/default_mirror() there, and a test in
+    mcp/tests asserts the two agree. Watching the wrong directory is not
+    cosmetic: the "connecting created no mirror" check below compares this path
+    before and after the handshake, so a stale rule makes it watch somewhere the
+    server would never write and pass without testing anything.
+    """
     env = os.environ.get("RFC_MIRROR")
     if env:
         return Path(env).expanduser()
+    base = os.environ.get("LOCALAPPDATA" if os.name == "nt" else "XDG_DATA_HOME")
+    if base and os.path.isabs(base):
+        return Path(base) / "rfc-ai-tooling"
     return Path.home() / ".local" / "share" / "rfc-ai-tooling"
 
 

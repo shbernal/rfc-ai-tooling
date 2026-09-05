@@ -127,9 +127,9 @@ def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
         "case this returns an empty list and get_rfc's line range is the way in."
     ),
 )
-def list_sections(number: int) -> dict:
+def list_sections(number: int | str) -> dict:
     try:
-        return rfc.sections_payload(_mirror(), number)
+        return rfc.sections_payload(_mirror(), rfc.parse_number(number))
     except rfc.RFCError as exc:
         return _fail(str(exc))
 
@@ -152,13 +152,17 @@ def list_sections(number: int) -> dict:
     ),
 )
 def get_rfc(
-    number: int,
+    number: int | str,
     section: str | None = None,
     start_line: int | None = None,
     max_lines: int | None = None,
     full: bool = False,
 ) -> dict:
     try:
+        # Through the same parser the CLI uses: it rejects the numbers that
+        # would otherwise reach the network as rfc0.txt, and it accepts the
+        # "RFC 9110" the model is holding rather than refusing the spelling.
+        number = rfc.parse_number(number)
         return rfc.read_payload(
             _mirror(),
             number,

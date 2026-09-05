@@ -304,6 +304,8 @@ def _parse_record(joined: str) -> Record | None:
 # under an arbitrary UID. As a module constant it took the import down with it,
 # and took --mirror and $RFC_MIRROR with that, though either one would have
 # meant this function was never needed.
+# mcp/smoke.py restates this rule; it is piped into a bare container and cannot
+# import this file. A test in mcp/tests asserts the two still agree.
 def default_mirror() -> Path:
     base = os.environ.get("LOCALAPPDATA" if os.name == "nt" else "XDG_DATA_HOME")
     # The spec says to ignore a relative value rather than resolve it.
@@ -377,8 +379,35 @@ def _fetch(
         raise RFCError(f"network error fetching {url}: {exc.reason}") from exc
 
 
-def ensure_index(mirror: Path, ttl: int = INDEX_TTL_SECONDS, force: bool = False) -> Path:
-    """Return the local index, refreshing it if it is missing or older than the TTL.
+def _write_atomically(path: Path, data: bytes) -> None:
+    """Write through a sibling temporary file and rename it into place.
+
+    A half-written file here is worse than no file at all, and it fails
+    silently in both directions: a truncated index carries a fresh mtime, so it
+    is served as current for a day and reports real RFCs as missing, while a
+    truncated document is only ever checked for existence, so nothing repairs
+    it. The temporary file is a sibling because os.replace is atomic within a
+    filesystem and not across one.
+    """
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.part")
+    try:
+        tmp.write_bytes(data)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            tmp.unlink()
+        raise
+
+
+def ensure_index(
+    mirror: Path, ttl: int = INDEX_TTL_SECONDS, force: bool = False
+) -> tuple[Path, bool]:
+    """Return the local index and whether this call rewrote it.
+
+    The index is refreshed if it is missing or older than the TTL. The second
+    half of the return is for load_index: a revalidation the CDN answers 304 to
+    still moves the mtime, and re-parsing 2 MB of text that did not change is
+    pure work — every day, for a server that stays up.
 
     The index must not be a write-once cache. An index fetched in January will
     report an RFC published in March as nonexistent, even though its URL fetches
@@ -408,7 +437,7 @@ def ensure_index(mirror: Path, ttl: int = INDEX_TTL_SECONDS, force: bool = False
         age = time.time() - path.stat().st_mtime
         fresh_enough = age < ttl
     if fresh_enough:
-        return path
+        return path, False
 
     known_etag = None
     if path.exists() and etag_path.exists():
@@ -424,20 +453,20 @@ def ensure_index(mirror: Path, ttl: int = INDEX_TTL_SECONDS, force: bool = False
     except RFCError:
         if not path.exists():
             raise  # Nothing to fall back to; the caller has to hear about it.
-        return path
+        return path, False
     data, etag = result  # type: ignore[misc]
 
     if data is None:
         path.touch()
-        return path
+        return path, False
 
     mirror.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
+    _write_atomically(path, data)
     if etag:
         # Losing the ETag only costs a revalidation next time.
         with contextlib.suppress(OSError):
             etag_path.write_text(etag, encoding="utf-8")
-    return path
+    return path, True
 
 
 # The last parse, kept against the identity of the file it came from. Callers
@@ -462,8 +491,10 @@ def load_index(mirror: Path, offline_only: bool = False) -> dict[int, Record]:
     """
     global _index_cache
     path = index_path(mirror)
+    # Nothing has been written on this call unless ensure_index says otherwise.
+    rewritten = True
     if not offline_only:
-        path = ensure_index(mirror)
+        path, rewritten = ensure_index(mirror)
     if not path.exists():
         raise RFCError(
             f"no RFC index at {path}. Run `{invocation()} status` while online to "
@@ -471,8 +502,16 @@ def load_index(mirror: Path, offline_only: bool = False) -> dict[int, Record]:
         )
     stat = path.stat()
     key = (str(path), stat.st_mtime_ns, stat.st_size)
-    if _index_cache is not None and _index_cache[0] == key:
-        return _index_cache[1]
+    if _index_cache is not None:
+        cached_key, cached = _index_cache
+        if cached_key == key:
+            return cached
+        # A revalidation answered 304 leaves the bytes alone and moves the
+        # mtime anyway, which is the one case where a changed key means
+        # nothing. Adopt the new key rather than re-reading what we have.
+        if not rewritten and (cached_key[0], cached_key[2]) == (key[0], key[2]):
+            _index_cache = (key, cached)
+            return cached
     records = parse_index(path.read_text(encoding="utf-8", errors="replace"))
     _index_cache = (key, records)
     return records
@@ -494,7 +533,7 @@ def read_document(mirror: Path, number: int) -> str:
     text = data.decode("utf-8", errors="replace")
     try:
         mirror.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        _write_atomically(path, data)
     except OSError:
         pass  # A read-only mirror is fine; we just do not get to cache.
     return text
@@ -539,13 +578,18 @@ def furniture_mask(lines: list[str]) -> list[bool]:
     return mask
 
 
-def find_sections(lines: list[str]) -> list[dict]:
+def find_sections(lines: list[str], mask: list[bool] | None = None) -> list[dict]:
     """Numbered headings with their 1-based line numbers.
 
     Headings sit at column 0 in every RFC generation; the table of contents is
     indented, which is what keeps it out of the results.
+
+    The mask can be passed in by a caller that needs one anyway; building it
+    walks the whole document with three regexes per line, and a section read
+    would otherwise do that twice.
     """
-    mask = furniture_mask(lines)
+    if mask is None:
+        mask = furniture_mask(lines)
     sections = []
     for i, line in enumerate(lines):
         if mask[i]:
@@ -623,7 +667,9 @@ def check_whole_document(
     )
 
 
-def slice_lines(lines: list[str], start: int, end: int, raw: bool) -> str:
+def slice_lines(
+    lines: list[str], start: int, end: int, raw: bool, mask: list[bool] | None = None
+) -> str:
     """Extract 1-based inclusive lines, dropping page furniture unless raw."""
     start = max(1, start)
     end = min(len(lines), end)
@@ -632,8 +678,10 @@ def slice_lines(lines: list[str], start: int, end: int, raw: bool) -> str:
     chunk = lines[start - 1 : end]
     if raw:
         return "\n".join(chunk)
-    mask = furniture_mask(lines)[start - 1 : end]
-    kept = [line for line, is_furniture in zip(chunk, mask, strict=True) if not is_furniture]
+    if mask is None:
+        mask = furniture_mask(lines)
+    window = mask[start - 1 : end]
+    kept = [line for line, is_furniture in zip(chunk, window, strict=True) if not is_furniture]
     return _collapse_blank_runs(kept)
 
 
@@ -656,6 +704,18 @@ def _collapse_blank_runs(lines: list[str]) -> str:
 # --------------------------------------------------------------------------
 
 
+def _check_limit(limit: int) -> None:
+    """A page of fewer than one result is not a page.
+
+    `hits[:0]` is an empty page under a non-zero total, which renders as "no
+    matches"; `hits[:-1]` silently drops the last row while the total still
+    counts it. The MCP surface takes this straight from the model, which is
+    where a negative one comes from.
+    """
+    if limit < 1:
+        raise RFCError(f"limit must be at least 1, got {limit}")
+
+
 def search_titles(
     records: dict[int, Record], query: str, limit: int, use_regex: bool = False
 ) -> tuple[list[Record], int]:
@@ -666,6 +726,7 @@ def search_titles(
     is the same failure as falling back to a title search: a confident answer
     to a question nobody asked.
     """
+    _check_limit(limit)
     if use_regex:
         try:
             pattern = re.compile(query, re.IGNORECASE)
@@ -705,6 +766,7 @@ def search_fulltext(
     Returns the page, the backend that produced it, and the total number of
     matching documents — see search_titles on why the total is not optional.
     """
+    _check_limit(limit)
     tool, is_rg = _search_tool()
     if is_rg:
         count_cmd = [
@@ -939,6 +1001,7 @@ def read_payload(
     lines = split_lines(read_document(mirror, number))
     scoped = start is not None or end is not None
 
+    mask = None
     section_info = None
     if section:
         if scoped:
@@ -947,7 +1010,8 @@ def read_payload(
                 f"reading; pass one. Use {hints.cap_flag} to cap how much of a section "
                 "comes back."
             )
-        first, last, section_info = section_range(find_sections(lines), section, len(lines))
+        mask = furniture_mask(lines)
+        first, last, section_info = section_range(find_sections(lines, mask), section, len(lines))
     elif scoped:
         first = 1 if start is None else start
         last = len(lines) if end is None else end
@@ -971,7 +1035,7 @@ def read_payload(
         "start_line": first,
         "end_line": min(last, len(lines)),
         "total_lines": len(lines),
-        "content": slice_lines(lines, first, last, raw),
+        "content": slice_lines(lines, first, last, raw, mask),
     }
 
 
@@ -1030,11 +1094,19 @@ def run_sync(mirror: Path, bwlimit: str, assume_yes: bool, dry_run: bool) -> int
 # --------------------------------------------------------------------------
 
 
-def parse_number(text: str) -> int:
-    match = re.fullmatch(r"(?:rfc\s*)?0*(\d+)", text.strip(), re.IGNORECASE)
-    if not match:
-        raise RFCError(f"not an RFC number: {text!r}")
-    return int(match.group(1))
+def parse_number(value: int | str) -> int:
+    """Accept 9110, "9110", "rfc9110" or "RFC 9110"; reject everything else.
+
+    Takes an int as well as a string so that the MCP tools can route through it
+    too. They used to pass the model's argument straight to a URL, where 0 and
+    negative numbers became a fetch of rfc0.txt and a 404 that reads as though
+    a real RFC does not exist.
+    """
+    match = re.fullmatch(r"(?:rfc\s*)?0*(\d+)", str(value).strip(), re.IGNORECASE)
+    number = int(match.group(1)) if match else 0
+    if not number:
+        raise RFCError(f"not an RFC number: {value!r}")
+    return number
 
 
 def _emit(payload: dict, human: str, as_json: bool) -> None:

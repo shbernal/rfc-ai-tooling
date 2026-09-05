@@ -13,6 +13,7 @@ them unchanged — so they are called directly.
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -54,6 +55,10 @@ def isolated_mirror(tmp_path, monkeypatch):
 
 def offline(*args, **kwargs):
     raise rfc.RFCError("network error fetching ...: [Errno -3] no name resolution")
+
+
+def _must_not_fetch(*args, **kwargs):
+    raise AssertionError("this should have been refused before any network call")
 
 
 def stale(path):
@@ -252,3 +257,68 @@ def test_list_sections_answers_identically_on_both_surfaces(sectioned, capsys):
 def test_a_title_search_answers_identically_on_both_surfaces(sectioned, capsys):
     query = "hypertext transfer"
     assert server.search_rfcs(query) == _cli(capsys, ["search", query])
+
+
+# --------------------------------------------------------------------------
+# Numbers the model supplies
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("bad", [0, -5, "draft-ietf-quic"])
+def test_a_number_that_is_not_an_rfc_number_never_reaches_the_network(bad, monkeypatch):
+    """These used to become rfc0.txt and rfc-5.txt and come back as a 404 that
+    reads like the RFC simply does not exist."""
+    monkeypatch.setattr(rfc, "_fetch", _must_not_fetch)
+    assert "not an RFC number" in server.get_rfc(bad)["error"]
+    assert "not an RFC number" in server.list_sections(bad)["error"]
+
+
+def test_the_model_may_spell_the_number_the_way_it_has_it(sectioned):
+    """It is holding "RFC 4242", and the CLI has always taken that."""
+    assert server.list_sections("RFC 4242") == server.list_sections(4242)
+    assert server.get_rfc("rfc4242", section="1") == server.get_rfc(4242, section="1")
+
+
+def test_a_limit_below_one_is_refused(sectioned):
+    """The model picks this number, so -1 and 0 arrive from outside."""
+    assert "at least 1" in server.search_rfcs("hypertext", limit=0)["error"]
+    assert "at least 1" in server.search_rfcs("hypertext", limit=-1)["error"]
+
+
+# --------------------------------------------------------------------------
+# smoke.py's copy of the mirror rule
+# --------------------------------------------------------------------------
+
+
+def _load_smoke():
+    """smoke.py is not importable as a package: it is a single stdlib-only file
+    so that it can be piped into a container that has never held this repo."""
+    path = Path(__file__).parents[1] / "smoke.py"
+    spec = importlib.util.spec_from_file_location("smoke", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    "environment",
+    [
+        {},
+        {"XDG_DATA_HOME": "/data"},
+        {"XDG_DATA_HOME": "relative/path"},
+        {"RFC_MIRROR": "/somewhere/else"},
+    ],
+    ids=["unset", "xdg", "relative-xdg", "explicit"],
+)
+def test_smoke_resolves_the_mirror_the_way_the_server_does(environment, monkeypatch):
+    """smoke.py restates the rule because it cannot import rfc.py, and it went
+    a release without being updated. What that costs is not cosmetic: its
+    "connecting created no mirror" check compares this path before and after
+    the handshake, so a stale rule watches a directory the server never writes
+    to and passes without testing anything.
+    """
+    for name in ("RFC_MIRROR", "XDG_DATA_HOME", "LOCALAPPDATA"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+    assert _load_smoke().mirror_path() == rfc.resolve_mirror()

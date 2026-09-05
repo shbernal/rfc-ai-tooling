@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -22,6 +23,15 @@ import rfc  # noqa: E402
 
 FIXTURES = Path(__file__).parent / "fixtures"
 INDEX_EXCERPT = (FIXTURES / "rfc-index-excerpt.txt").read_text(encoding="utf-8")
+
+# Any spelling will do where the test is not about what the refusal says.
+HINTS = rfc.ReadHints(
+    list_hint="rfc sections 4242",
+    override_hint="--full",
+    section_flag="--section",
+    range_flag="--lines",
+    cap_flag="--max-lines",
+)
 
 
 @pytest.fixture(scope="module")
@@ -225,6 +235,39 @@ def test_blank_runs_collapse_and_the_edges_are_trimmed():
 
 
 # --------------------------------------------------------------------------
+# Writing a file without leaving half of one
+# --------------------------------------------------------------------------
+
+
+def _explode(*args, **kwargs):
+    raise OSError("no space left on device")
+
+
+def test_an_interrupted_write_leaves_the_previous_file_untouched(tmp_path, monkeypatch):
+    """A truncated index would carry a fresh mtime and be served as current for
+    a day, reporting real RFCs as missing."""
+    path = rfc.index_path(tmp_path)
+    path.write_text("the index that was already there\n", encoding="utf-8")
+    monkeypatch.setattr(rfc.os, "replace", _explode)
+
+    with pytest.raises(OSError):
+        rfc._write_atomically(path, b"x" * 4096)
+
+    assert path.read_text(encoding="utf-8") == "the index that was already there\n"
+    assert list(tmp_path.glob("*.part")) == [], "the half-written file outlived the failure"
+
+
+def test_a_document_that_cannot_be_cached_is_still_returned(tmp_path, monkeypatch):
+    """A read-only mirror costs the cache, not the answer."""
+    monkeypatch.setattr(rfc, "_fetch", lambda url, **kw: b"body line\n")
+    monkeypatch.setattr(rfc.os, "replace", _explode)
+
+    assert rfc.read_document(tmp_path, 4242) == "body line\n"
+    assert not rfc.document_path(tmp_path, 4242).exists(), "a partial document caches forever"
+    assert list(tmp_path.glob("*.part")) == []
+
+
+# --------------------------------------------------------------------------
 # Mode detection
 # --------------------------------------------------------------------------
 
@@ -381,6 +424,15 @@ def test_limit_is_honoured(records):
     assert len(hits) == 2
 
 
+@pytest.mark.parametrize("limit", [0, -1])
+def test_a_limit_below_one_is_refused(records, limit):
+    """`hits[:-1]` drops the last row while the total still counts it, so the
+    page says truncated and omits a result for no stated reason; `hits[:0]`
+    renders as "no matches" under a non-zero total."""
+    with pytest.raises(rfc.RFCError, match="at least 1"):
+        rfc.search_titles(records, "", limit=limit)
+
+
 def test_a_truncated_page_still_reports_the_real_total(records):
     """The page size is not the answer.
 
@@ -492,6 +544,12 @@ def test_a_query_nothing_matches_comes_back_empty(mirror, backend):
     results, _, total = rfc.search_fulltext(mirror, "zzzunmatchable", limit=10)
     assert results == []
     assert total == 0
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+def test_a_fulltext_limit_below_one_is_refused(mirror, backend, limit):
+    with pytest.raises(rfc.RFCError, match="at least 1"):
+        rfc.search_fulltext(mirror, "widget", limit=limit)
 
 
 @pytest.mark.parametrize(
@@ -756,6 +814,19 @@ def test_number_forms(text, expected):
     assert rfc.parse_number(text) == expected
 
 
+def test_an_integer_is_accepted_as_well_as_a_string():
+    """The MCP tools route through this too, and they are handed an int."""
+    assert rfc.parse_number(9110) == 9110
+
+
+@pytest.mark.parametrize("value", [0, "0", -5, "rfc0"])
+def test_below_one_is_not_an_rfc_number(value):
+    """Left through, these reach the network as rfc0.txt and come back as a
+    404 that reads like the RFC does not exist."""
+    with pytest.raises(rfc.RFCError, match="not an RFC number"):
+        rfc.parse_number(value)
+
+
 @pytest.mark.parametrize("text", ["", "draft-ietf-quic", "26-16", "abc"])
 def test_rejects_non_numbers(text):
     with pytest.raises(rfc.RFCError):
@@ -877,7 +948,7 @@ def test_an_unreachable_refresh_falls_back_to_the_index_on_disk(tmp_path, monkey
         raise rfc.RFCError("network error fetching ...: [Errno -3] no name resolution")
 
     monkeypatch.setattr(rfc, "_fetch", offline)
-    assert rfc.ensure_index(tmp_path) == path
+    assert rfc.ensure_index(tmp_path) == (path, False), "the copy on disk, and nothing rewritten"
     assert path.read_text() == INDEX_EXCERPT
     # Searching still works, and the obsolescence banner survives.
     assert rfc.load_index(tmp_path)
@@ -917,6 +988,45 @@ def test_an_unreachable_refresh_with_no_index_still_raises(tmp_path, monkeypatch
         rfc.ensure_index(tmp_path)
 
 
+def test_a_revalidation_that_changed_nothing_does_not_reparse(tmp_path, monkeypatch):
+    """The 304 resets the freshness clock by touching the file, which moves the
+    mtime the parse cache is keyed on. Re-reading 2 MB of identical text is
+    work a server that stays up would do every day."""
+    monkeypatch.setattr(rfc, "_index_cache", None)
+    index = rfc.index_path(tmp_path)
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    index.write_text(INDEX_EXCERPT, encoding="utf-8")
+    assert rfc.load_index(tmp_path)
+
+    aged = time.time() - rfc.INDEX_TTL_SECONDS - 1
+    os.utime(index, (aged, aged))
+    monkeypatch.setattr(rfc, "_fetch", lambda url, **kw: (None, None))
+
+    parses = []
+    real_parse = rfc.parse_index
+    monkeypatch.setattr(rfc, "parse_index", lambda text: (parses.append(1), real_parse(text))[1])
+    assert rfc.load_index(tmp_path)
+    assert parses == []
+
+
+def test_an_index_that_did_change_is_reparsed(tmp_path, monkeypatch):
+    """The shortcut above must not survive a refresh that brought new bytes."""
+    monkeypatch.setattr(rfc, "_index_cache", None)
+    index = rfc.index_path(tmp_path)
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    index.write_text(INDEX_EXCERPT, encoding="utf-8")
+    assert 9999 not in rfc.load_index(tmp_path)
+
+    aged = time.time() - rfc.INDEX_TTL_SECONDS - 1
+    os.utime(index, (aged, aged))
+    published = INDEX_EXCERPT + (
+        "\n9999 A Stateless Application Protocol. S. Bernal. August 2026. "
+        "(Status: PROPOSED STANDARD) (DOI: 10.17487/RFC9999)\n"
+    )
+    monkeypatch.setattr(rfc, "_fetch", lambda url, **kw: (published.encode("utf-8"), None))
+    assert 9999 in rfc.load_index(tmp_path)
+
+
 def test_refresh_cadence_and_the_staleness_warning_are_separate(tmp_path, capsys):
     """Refreshing daily must not make `status` call a two-day-old index stale."""
     import argparse
@@ -934,6 +1044,22 @@ def test_refresh_cadence_and_the_staleness_warning_are_separate(tmp_path, capsys
     index_info = json.loads(capsys.readouterr().out)["index"]
     assert index_info["age_seconds"] > rfc.INDEX_TTL_SECONDS
     assert index_info["stale"] is False
+
+
+def test_a_section_read_walks_the_document_for_furniture_only_once(tmp_path, monkeypatch):
+    """find_sections and slice_lines both need the mask, and building it is
+    three regexes over every line of a document that can run to 40,000."""
+    monkeypatch.setattr(rfc, "load_index", lambda *a, **k: {})
+    rfc.document_path(tmp_path, 4242).write_text(
+        (FIXTURES / "paginated.txt").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    calls = []
+    real_mask = rfc.furniture_mask
+    monkeypatch.setattr(rfc, "furniture_mask", lambda lines: (calls.append(1), real_mask(lines))[1])
+
+    payload = rfc.read_payload(tmp_path, 4242, section="1", hints=HINTS)
+    assert "Purpose prose" in payload["content"]
+    assert len(calls) == 1
 
 
 # --------------------------------------------------------------------------
@@ -969,7 +1095,7 @@ def test_real_documents_of_both_generations_parse(tmp_path, number, first_sectio
 
 @pytest.mark.network
 def test_the_live_index_still_parses():
-    path = rfc.ensure_index(Path.home() / ".cache" / "rfc-ai-tooling-test", force=True)
+    path, _ = rfc.ensure_index(Path.home() / ".cache" / "rfc-ai-tooling-test", force=True)
     parsed = rfc.parse_index(path.read_text(encoding="utf-8", errors="replace"))
     assert len(parsed) > 9000
     assert parsed[2616].title == "Hypertext Transfer Protocol -- HTTP/1.1"
