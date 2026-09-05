@@ -8,6 +8,90 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## 0.4.0 — 2026-09-05
+
+### Breaking
+
+- **Full-text queries are literal.** `--fulltext` / `scope='fulltext'` passed
+  the query straight to `rg -e` or `grep -E`, so every search was a pattern in
+  whichever dialect the machine happened to have. `\d` is a digit class to
+  ripgrep and a literal `d` to POSIX ERE; `C++` matches on one and fails to
+  compile on the other. The same query over the same corpus answered two
+  different questions depending on what was installed, and a search for
+  `application/json;charset` or `RFC 2616 (1)` hit that with nothing to explain
+  it.
+
+  Queries now match literally. `--regex` / `regex=true` opts back into pattern
+  matching — which is what that flag has always meant for titles and, until
+  now, was silently ignored under `--fulltext`. The dialect there is still the
+  backend's own; `tool` in the payload names which one answered.
+
+- **`hits` is now `matching_lines`, and it counts the same thing everywhere.**
+  Ripgrep was asked for `--count-matches` and grep for `-c`, so the number was
+  every match on one backend and every matching *line* on the other. That
+  number is what ranks the results, so a search could come back in a different
+  order on a different machine, and the field name settled nothing. Both are
+  asked for matching lines now. Expect smaller numbers where ripgrep is
+  installed, and read `matching_lines` where you read `hits`.
+
+- **Title results put current RFCs before superseded ones.** Results were
+  ordered by RFC number ascending and then cut at `--limit` (20 by default), so
+  the oldest matches filled the page and the newest were dropped — on this
+  corpus, keeping RFC 2616 and losing RFC 9110, which is the exact instinct the
+  obsolescence banner exists to correct. Superseded documents now sort after
+  current ones, ascending by number within each group. They still appear and
+  `total` is unchanged; they no longer crowd out what replaced them.
+
+- **A number at the start of a line is no longer a heading on its own.**
+  `sections` accepted anything matching `N.` at column 0, so prose wrapping
+  onto a line that opens with a number became a section: RFC 1035 reported a
+  section 25 made of half a sentence about SMTP, and RFC 768, which has no
+  numbered headings at all, reported one called "Aug 1980". A top-level heading
+  now has to continue the sequence — `1`, then `2`, and so on — which leaves
+  every real heading in RFC 2616 and RFC 9110 in place and takes RFC 1700, the
+  worst case in the corpus, from 364 headings to 71. A `--section` that used to
+  resolve to a line of table data no longer resolves; there is no way to ask
+  for one back, because it was never a section.
+
+- **`limit` below 1 is an error.** `limit=-1` dropped the last result while
+  `total` still counted it, so the page reported itself as truncated and
+  omitted a row for no stated reason; `limit=0` rendered as "no matches" under
+  a non-zero total.
+
+- **The MCP tools validate the RFC number.** `get_rfc(0)` and
+  `list_sections(-5)` used to reach the network as `rfc0.txt` and `rfc-5.txt`
+  and come back as a 404 that read as though the RFC did not exist. They now
+  refuse before fetching, through the same parser the CLI uses — which also
+  means `number` accepts `"RFC 9110"` and `"rfc9110"` as well as `9110`.
+
+### Added
+
+- **`regex` on the MCP `search_rfcs` tool**, matching the CLI's `--regex` in
+  both scopes.
+- **Payload keys the two surfaces disagreed about**, reconciled to the union of
+  what each returned. Full-text results carry `tool`, and each row carries
+  `record`, `title` and `header`; title results carry `fulltext_available`.
+  Nothing that was there is gone.
+
+### Fixed
+
+- **The index and cached documents are written atomically.** Both were written
+  straight over the target, so a process killed mid-write left a truncated
+  file — and it failed silently either way. A half-written index carries a
+  fresh mtime, so it was served as current for a day and reported real RFCs as
+  missing; a half-written document is only ever checked for existence, so
+  nothing ever repaired it.
+- **`smoke.py` resolves the mirror the way the server does.** Its copy of the
+  rule was not updated when 0.3.0 moved the default to `$XDG_DATA_HOME`, so on
+  any machine with that set its "connecting and listing tools created no
+  mirror" check watched a directory the server would never write to and passed
+  without testing anything.
+- **A revalidation the CDN answers 304 to no longer re-parses the index.** The
+  touch that resets the freshness clock moved the mtime the parse cache is
+  keyed on, so a server that stays up re-read 2 MB of unchanged text every day.
+- **A section read builds the page-furniture mask once** instead of walking the
+  whole document for it twice.
+
 ## 0.3.0 — 2026-08-15
 
 ### Fixed

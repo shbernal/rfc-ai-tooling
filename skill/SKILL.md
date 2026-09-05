@@ -73,16 +73,23 @@ mirror:
 
 ```bash
 python3 scripts/rfc.py search "must-revalidate" --fulltext
+python3 scripts/rfc.py search "application/json;charset" --fulltext
 ```
+
+Queries are literal, so the second one asks what it looks like it asks. `--regex`
+opts into pattern matching in either scope; under `--fulltext` the dialect is
+whichever of `rg` or `grep` is installed, and `--json` names it in `tool`.
 
 If there is no mirror, `--fulltext` fails with a message rather than falling back
 to titles — a title search silently standing in for a full-text search answers a
 different question than the one asked.
 
-Both scopes return at most `--limit` results (default 20). When more matched, the
-output ends with `(showing 20 of 795 — raise --limit for more)`, and `--json`
-carries `total` and `truncated`. **Report the total, never the number of rows you
-were handed** — a truncated page counted as the answer is off by whatever was cut.
+Both scopes return at most `--limit` results (default 20). Title results put
+current RFCs before superseded ones, so a page cut short at the limit keeps the
+document you want rather than the one it replaced. When more matched, the output
+ends with `(showing 20 of 795 — raise --limit for more)`, and `--json` carries
+`total` and `truncated`. **Report the total, never the number of rows you were
+handed** — a truncated page counted as the answer is off by whatever was cut.
 
 `status` says which mode you are in:
 
@@ -138,8 +145,9 @@ never refused for its length, however long it is. `--full` overrides the
 whole-document guard when the entire text really is the goal, which is rarer
 than it sounds.
 
-Some older RFCs — RFC 1060 among them — have no numbered headings at all.
-`sections` will say so, and a line range is the fallback:
+Some older RFCs — RFC 768 and RFC 1060 among them — have no numbered headings at
+all. `sections` says so instead of inventing any, and a line range is the
+fallback:
 
 ```bash
 python3 scripts/rfc.py get 1060 --lines 200:320

@@ -140,6 +140,8 @@ only the 2 MB index the server fetches on demand.
 ## What it does
 
 - **Search** RFCs by title, or by full document text once a mirror is synced.
+  Queries are literal unless you ask for a regex, and current RFCs come before
+  superseded ones, so a page cut short at the limit keeps the replacement.
 - **List sections** of an RFC with line numbers, so the agent can read the one
   section it needs instead of pulling a 500 KB document into context.
 - **Fetch** a section, or a line range, with page headers and footers stripped.

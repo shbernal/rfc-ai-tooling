@@ -31,6 +31,12 @@ the per-server log records only the handshake, so it cannot tell you either way
 | `list_sections` | An RFC's headings with line numbers — the cheap first call |
 | `get_rfc` | Read one section, or a line range |
 
+Queries are literal by default; `regex=true` opts into pattern matching, and
+under `scope='fulltext'` the dialect is whichever of `rg` or `grep` the machine
+has, which the payload names in `tool`. Title results put current RFCs before
+superseded ones, so a page cut short at `limit` keeps the document you want
+rather than the one it replaced.
+
 `get_rfc` refuses an unscoped read of an RFC over 1500 lines, answering with its
 size and a pointer to `list_sections` rather than filling the context with a
 specification the model had one question about. `full=true` overrides it. A
