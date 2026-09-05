@@ -591,6 +591,7 @@ def find_sections(lines: list[str], mask: list[bool] | None = None) -> list[dict
     if mask is None:
         mask = furniture_mask(lines)
     sections = []
+    expected_top = 1
     for i, line in enumerate(lines):
         if mask[i]:
             continue
@@ -598,6 +599,17 @@ def find_sections(lines: list[str], mask: list[bool] | None = None) -> list[dict
         if not match:
             continue
         number = match.group(1)
+        # A bare number at column 0 is not enough. Pre-1990 RFCs put tables
+        # there — the assigned-numbers family especially — and every row of one
+        # parsed as a heading, so `sections` answered with a list of table rows
+        # and `get --section` resolved to a row of data. Requiring the top level
+        # to count 1, 2, 3 rejects "1996 was a good year" without rejecting a
+        # real "2. Terminology". Deeper numbers keep the plain rule; a dotted
+        # number at column 0 is hard to hit by accident.
+        if "." not in number:
+            if int(number) != expected_top:
+                continue
+            expected_top += 1
         sections.append(
             {
                 "section": number,
@@ -743,6 +755,12 @@ def search_titles(
             return all(term in lowered for term in terms)
 
     hits = [r for _, r in sorted(records.items()) if not r.not_issued and matches(r.title)]
+    # Ascending by number alone fills the page with the oldest matches and cuts
+    # the newest, which on this corpus keeps RFC 2616 and drops RFC 9110 — the
+    # exact instinct the project exists to correct. Superseded documents still
+    # appear, and `total` is unchanged; they just stop crowding out what
+    # replaced them.
+    hits.sort(key=lambda r: bool(r.obsoleted_by))
     return hits[:limit], len(hits)
 
 
@@ -756,12 +774,27 @@ def _search_tool() -> tuple[str, bool]:
 
 
 def search_fulltext(
-    mirror: Path, query: str, limit: int, max_lines_per_doc: int = 3
+    mirror: Path,
+    query: str,
+    limit: int,
+    max_lines_per_doc: int = 3,
+    use_regex: bool = False,
 ) -> tuple[list[dict], str, int]:
-    """Rank documents by hit count, then pull a few matching lines from each.
+    r"""Rank documents by how many of their lines match, then quote a few.
 
-    Two passes so that ranking reflects real hit counts: capping matches per
+    Two passes so that the ranking reflects the real count: capping matches per
     file in a single pass would flatten every document to the same score.
+
+    Both backends are asked for *matching lines* — `rg --count`, not
+    `--count-matches` — because otherwise the number means whichever tool
+    happened to be installed, and the ranking the two passes exist to produce
+    comes out in a different order on a different machine.
+
+    The query is a literal string unless use_regex. A pattern here is the
+    backend's own dialect and the two do not agree: `\d` is a digit class to rg
+    and a literal `d` to POSIX ERE, and `C++` matches on one and fails to
+    compile on the other. Defaulting to literal means a search for
+    `application/json;charset` asks what it looks like it asks.
 
     Returns the page, the backend that produced it, and the total number of
     matching documents — see search_titles on why the total is not optional.
@@ -771,9 +804,10 @@ def search_fulltext(
     if is_rg:
         count_cmd = [
             "rg",
-            "--count-matches",
+            "--count",
             "--no-messages",
             "-i",
+            *([] if use_regex else ["-F"]),
             "-e",
             query,
             "--glob",
@@ -781,7 +815,14 @@ def search_fulltext(
             str(mirror),
         ]
     else:
-        count_cmd = ["grep", "-rciE", "--include=rfc*.txt", "--", query, str(mirror)]
+        count_cmd = [
+            "grep",
+            f"-rci{'E' if use_regex else 'F'}",
+            "--include=rfc*.txt",
+            "--",
+            query,
+            str(mirror),
+        ]
 
     counts: list[tuple[int, int]] = []
     for line in _run_search(count_cmd):
@@ -790,15 +831,15 @@ def search_fulltext(
         if number is None:
             continue
         try:
-            hits = int(count)
+            matching_lines = int(count)
         except ValueError:
             continue
-        if hits:
-            counts.append((hits, number))
+        if matching_lines:
+            counts.append((matching_lines, number))
     counts.sort(key=lambda pair: (-pair[0], pair[1]))
 
     results = []
-    for hits, number in counts[:limit]:
+    for matching_lines, number in counts[:limit]:
         path = document_path(mirror, number)
         # --no-filename / -h keep the output shape at "line:text" for both tools.
         if is_rg:
@@ -813,19 +854,28 @@ def search_fulltext(
                 "--max-count",
                 str(max_lines_per_doc),
                 "-i",
+                *([] if use_regex else ["-F"]),
                 "-e",
                 query,
                 str(path),
             ]
         else:
-            line_cmd = ["grep", "-nhiE", "-m", str(max_lines_per_doc), "--", query, str(path)]
+            line_cmd = [
+                "grep",
+                f"-nhi{'E' if use_regex else 'F'}",
+                "-m",
+                str(max_lines_per_doc),
+                "--",
+                query,
+                str(path),
+            ]
         matches = []
         for line in _run_search(line_cmd):
             lineno, _, body = line.partition(":")
             if not lineno.isdigit():
                 continue
             matches.append({"line": int(lineno), "text": body.strip()})
-        results.append({"number": number, "hits": hits, "matches": matches})
+        results.append({"number": number, "matching_lines": matching_lines, "matches": matches})
     return results, tool, len(counts)
 
 
@@ -940,7 +990,7 @@ def search_payload(
     if scope == "fulltext":
         if not populated:
             raise RFCError(unavailable_message)
-        results, tool, total = search_fulltext(mirror, query, limit)
+        results, tool, total = search_fulltext(mirror, query, limit, use_regex=regex)
         records = load_index(mirror, offline_only=True)
         for result in results:
             record = records.get(result["number"])

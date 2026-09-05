@@ -285,6 +285,13 @@ def test_a_limit_below_one_is_refused(sectioned):
     assert "at least 1" in server.search_rfcs("hypertext", limit=-1)["error"]
 
 
+def test_regex_reaches_the_model_too(sectioned):
+    """The switch is one argument on one payload builder, so it has to be
+    offered on both surfaces or it is offered on neither."""
+    assert server.search_rfcs(r"HTTP/\d\.\d", regex=True)["total"] == 1
+    assert server.search_rfcs(r"HTTP/\d\.\d")["total"] == 0
+
+
 # --------------------------------------------------------------------------
 # smoke.py's copy of the mirror rule
 # --------------------------------------------------------------------------

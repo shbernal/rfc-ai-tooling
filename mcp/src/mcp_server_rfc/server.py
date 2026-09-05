@@ -100,13 +100,14 @@ def _read_hints(number: int) -> rfc.ReadHints:
         "the results you were given."
     ),
 )
-def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
+def search_rfcs(query: str, scope: str = "title", limit: int = 20, regex: bool = False) -> dict:
     try:
         return rfc.search_payload(
             _mirror(),
             query,
             scope=scope,
             limit=limit,
+            regex=regex,
             unavailable_message=rfc.fulltext_unavailable_message(
                 retry_hint="Retry with scope='title'", remote=_over_http
             ),

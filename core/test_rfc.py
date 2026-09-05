@@ -211,6 +211,31 @@ def test_modern_documents_have_no_furniture_to_strip():
     assert rfc.furniture_mask(lines) == [False] * len(lines)
 
 
+def test_a_number_at_column_zero_is_not_a_heading_on_its_own():
+    """Pre-1990 RFCs put tables at column 0 — the assigned-numbers family
+    especially — and every row came back dressed as a heading, so `sections`
+    answered with data rows and `get --section` resolved to one."""
+    lines = rfc.split_lines("1996 was a good year for protocols\n\n1. Real Heading\n   body\n")
+    sections = rfc.find_sections(lines)
+    assert [s["section"] for s in sections] == ["1"]
+    assert sections[0]["title"] == "Real Heading"
+
+
+def test_the_top_level_has_to_count_up():
+    lines = rfc.split_lines(
+        "1. Introduction\n   prose\n2. Terminology\n   prose\n"
+        "17 October 1994 is not section 17\n3. Body\n   prose\n"
+    )
+    assert [s["section"] for s in rfc.find_sections(lines)] == ["1", "2", "3"]
+
+
+def test_a_subsection_still_only_has_to_look_like_one():
+    """A dotted number at column 0 is hard to hit by accident, so the plain
+    rule stays there rather than growing a second heuristic."""
+    lines = rfc.split_lines("1. Intro\n   prose\n1.4 Scope\n   prose\n")
+    assert [s["section"] for s in rfc.find_sections(lines)] == ["1", "1.4"]
+
+
 def test_documents_without_numbered_headings_yield_no_sections():
     lines = rfc.split_lines("Some prose.\n\n   Indented text that is not a heading.\n")
     assert rfc.find_sections(lines) == []
@@ -419,6 +444,36 @@ def test_title_search_skips_not_issued_entries(records):
     assert all(not r.not_issued for r in hits)
 
 
+def test_a_superseded_document_does_not_outrank_its_replacement(records):
+    """Ascending by number alone put RFC 2616 above whatever replaced it, and
+    on a page of 20 it cut the replacement off entirely — the exact instinct
+    the obsolescence banner exists to correct."""
+    hits, _ = rfc.search_titles(records, "", limit=100)
+    numbers = [r.number for r in hits]
+    superseded = [r.number for r in hits if r.obsoleted_by]
+    assert superseded, "the fixture has to contain one for this to mean anything"
+    assert numbers.index(superseded[0]) > max(
+        numbers.index(r.number) for r in hits if not r.obsoleted_by
+    )
+
+
+def test_current_documents_are_still_ordered_by_number(records):
+    """Only the dead ones move; ascending order is what makes results
+    predictable, and RFC 791 still leads a search for the internet protocol."""
+    hits, _ = rfc.search_titles(records, "", limit=100)
+    current = [r.number for r in hits if not r.obsoleted_by]
+    assert current == sorted(current)
+    superseded = [r.number for r in hits if r.obsoleted_by]
+    assert superseded == sorted(superseded)
+
+
+def test_a_page_cut_short_keeps_the_current_documents(records):
+    everything, total = rfc.search_titles(records, "", limit=100)
+    page, page_total = rfc.search_titles(records, "", limit=2)
+    assert page_total == total
+    assert all(not r.obsoleted_by for r in page), "the page should not be spent on dead RFCs"
+
+
 def test_limit_is_honoured(records):
     hits, _ = rfc.search_titles(records, "", limit=2)
     assert len(hits) == 2
@@ -503,17 +558,14 @@ def backend(request, monkeypatch) -> str:
     return tool
 
 
-def test_the_backends_rank_the_same_corpus_differently(mirror, backend):
-    """`rg --count-matches` counts every match; `grep -c` counts matching
-    lines. So rfc1000's three hits on one line score 3 under one backend and 1
-    under the other, and the two orderings disagree. Asserted as it stands, so
-    that normalising it reads as a deliberate edit here rather than silence.
-    """
+def test_the_backends_rank_the_same_corpus_the_same_way(mirror, backend):
+    """Both are asked for matching lines, so rfc1000's three hits on one line
+    score 1 either way and the ranking no longer depends on which tool the
+    machine happens to have. `rg --count-matches` used to answer 3 here."""
     results, tool, total = rfc.search_fulltext(mirror, "widget", limit=10)
     assert tool == backend
     assert total == 2, "rfc3000 matches nothing and must not be ranked"
-    ranked = [(r["number"], r["hits"]) for r in results]
-    assert ranked == ([(1000, 3), (2000, 2)] if backend == "rg" else [(2000, 2), (1000, 1)])
+    assert [(r["number"], r["matching_lines"]) for r in results] == [(2000, 2), (1000, 1)]
 
 
 def test_matches_carry_line_numbers_that_index_the_file(mirror, backend):
@@ -537,7 +589,34 @@ def test_matched_lines_are_capped_per_document_but_the_score_is_not(mirror, back
     results, _, _ = rfc.search_fulltext(mirror, "widget", limit=10, max_lines_per_doc=1)
     hit = next(r for r in results if r["number"] == 2000)
     assert len(hit["matches"]) == 1
-    assert hit["hits"] == 2
+    assert hit["matching_lines"] == 2
+
+
+def test_a_query_is_literal_by_default(mirror, backend):
+    """Every full-text query used to be a pattern in whichever dialect the
+    installed backend spoke: `C++` matched on rg and failed to compile on
+    grep, and `\\d` was a digit class to one and the letter d to the other."""
+    (mirror / "rfc4000.txt").write_text("notes on C++ and a.b\n", encoding="utf-8")
+    results, _, _ = rfc.search_fulltext(mirror, "C++", limit=10)
+    assert [r["number"] for r in results] == [4000]
+
+
+def test_a_literal_query_does_not_match_as_a_pattern(mirror, backend):
+    (mirror / "rfc4000.txt").write_text("axb\na.b\n", encoding="utf-8")
+    results, _, _ = rfc.search_fulltext(mirror, "a.b", limit=10)
+    row = next(r for r in results if r["number"] == 4000)
+    assert [m["text"] for m in row["matches"]] == ["a.b"], "'.' is a full stop, not any character"
+    assert row["matching_lines"] == 1
+
+
+def test_regex_opts_back_into_the_backends_own_dialect(mirror, backend):
+    """What --regex has always meant for titles, now reaching full text too."""
+    (mirror / "rfc4000.txt").write_text("gamma\ndelta\n", encoding="utf-8")
+    pattern = "gam(ma|bit)"
+    results, _, total = rfc.search_fulltext(mirror, pattern, limit=10, use_regex=True)
+    assert [r["number"] for r in results] == [4000]
+    assert rfc.search_fulltext(mirror, pattern, limit=10)[2] == 0, "literal by default"
+    assert total == 1
 
 
 def test_a_query_nothing_matches_comes_back_empty(mirror, backend):
@@ -1091,6 +1170,43 @@ def test_real_documents_of_both_generations_parse(tmp_path, number, first_sectio
     sections = rfc.find_sections(lines)
     assert sections and sections[0]["section"] == first_section
     assert all(lines[s["line"] - 1].startswith(s["section"]) for s in sections)
+
+
+@pytest.mark.network
+@pytest.mark.parametrize(
+    ("number", "expected"),
+    [
+        # Paginated, and long enough that a rule reaching too far shows up as
+        # an extra top-level number rather than as something subtle.
+        (2616, [str(n) for n in range(1, 22)]),
+        # XML-generated, so there is no page furniture to step over.
+        (9110, [str(n) for n in range(1, 20)]),
+        # DNS. Section 4.1.4's prose wraps onto a line beginning "25 (SMTP)."
+        # at column 0, which used to be section 25.
+        (1035, [str(n) for n in range(1, 10)]),
+        # UDP has no numbered headings at all. Its one false heading was the
+        # date line, "28 Aug 1980".
+        (768, []),
+    ],
+)
+def test_the_top_level_headings_of_a_real_rfc_are_its_own(tmp_path, number, expected):
+    lines = rfc.split_lines(rfc.read_document(tmp_path, number))
+    top = [s["section"] for s in rfc.find_sections(lines) if "." not in s["section"]]
+    assert top == expected
+
+
+@pytest.mark.network
+def test_a_registry_document_is_mostly_no_longer_read_as_sectioned(tmp_path):
+    """RFC 1700 is pages of tables at column 0 and the worst case in the
+    corpus: it used to report 364 headings. Requiring the top level to count up
+    takes that to 71, all but one of which are dotted numbers from a table of
+    multicast addresses — a subsection is not constrained, because constraining
+    one costs RFC 2616 thirty-three real ones.
+    """
+    lines = rfc.split_lines(rfc.read_document(tmp_path, 1700))
+    sections = rfc.find_sections(lines)
+    assert len(sections) < 100
+    assert not [s for s in sections if s["section"].startswith("445")]
 
 
 @pytest.mark.network
