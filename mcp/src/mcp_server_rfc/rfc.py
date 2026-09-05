@@ -31,7 +31,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from email.utils import formatdate
 from pathlib import Path
 
@@ -132,19 +132,14 @@ class Record:
     not_issued: bool = False
 
     def to_dict(self) -> dict:
+        """Every field, plus the two the caller would otherwise derive.
+
+        Built from the dataclass rather than restated field by field: a list
+        written out by hand is one a new field is quietly missing from, and it
+        would go missing from every JSON caller at once.
+        """
         return {
-            "number": self.number,
-            "title": self.title,
-            "authors": self.authors,
-            "date": self.date,
-            "status": self.status,
-            "doi": self.doi,
-            "obsoletes": self.obsoletes,
-            "obsoleted_by": self.obsoleted_by,
-            "updates": self.updates,
-            "updated_by": self.updated_by,
-            "also": self.also,
-            "not_issued": self.not_issued,
+            **asdict(self),
             "obsolete": bool(self.obsoleted_by),
             "header": self.header(),
         }
@@ -790,6 +785,197 @@ def _number_from_path(path: str) -> int | None:
 
 
 # --------------------------------------------------------------------------
+# Payloads
+# --------------------------------------------------------------------------
+#
+# One builder per operation, because there are two surfaces and only one
+# answer. The CLI and the MCP server used to assemble these dicts separately
+# and had already drifted — one carried the search backend's name, the other
+# carried a title string where the first carried a whole record — with nothing
+# to catch it: `make check-vendor` holds this file identical across its copies,
+# and the adapters sit outside that. What is genuinely per-surface is how the
+# result is rendered and how the flags are spelled, and that is all the
+# surfaces are left holding.
+
+
+@dataclass(frozen=True)
+class ReadHints:
+    """How the calling surface spells the flags a read error has to name.
+
+    A refusal that names `--section` to a model calling `get_rfc(section=...)`
+    is telling it to type something that does not exist, so the message is
+    written once and the spelling is supplied by whoever is being spoken to.
+    """
+
+    list_hint: str  # "rfc sections 9110" / "list_sections(9110)"
+    override_hint: str  # "--full" / "full=true"
+    section_flag: str  # "--section" / "section"
+    range_flag: str  # "--lines" / "start_line"
+    cap_flag: str  # "--max-lines" / "max_lines"
+
+
+def bare_header(number: int) -> str:
+    """The banner for an RFC the index cannot describe."""
+    return f"RFC {number}"
+
+
+def fulltext_unavailable_message(*, retry_hint: str, remote: bool = False) -> str:
+    """Why an unsynced full-text search is an error rather than a title search.
+
+    The reason is the same on both surfaces and only the way out differs, so the
+    reason is written here once. `remote` is for a server answering over HTTP,
+    where the machine that would need syncing may not be the reader's and
+    telling them to sync it is advice that cannot be followed.
+    """
+    if remote:
+        where = (
+            "There is no RFC mirror on the machine running this server. It is "
+            "answering over HTTP, so that machine may not be yours: if it is, run "
+            f"`{invocation()} sync` there; if it is not, full-text search is "
+            "unavailable on this instance and there is nothing to install."
+        )
+    else:
+        where = (
+            "Full-text search needs a local RFC mirror, which is not present. "
+            f"Run `{invocation()} sync` in any shell on this machine "
+            "(512 MB, a few minutes) to create one."
+        )
+    return (
+        f"{where} Searching titles instead would quietly answer a different "
+        f"question, so this is an error and not a fallback. {retry_hint} if a "
+        "title search is what you want."
+    )
+
+
+def header_for(mirror: Path, number: int) -> str:
+    """Best-effort banner.
+
+    Worth fetching the index for if it is missing, because the obsolescence
+    warning is the main thing this adds over reading the document directly. But
+    a missing index must never block reading: fall back to a bare banner.
+    """
+    try:
+        record = load_index(mirror).get(number)
+    except RFCError:
+        record = None
+    return record.header() if record else bare_header(number)
+
+
+def search_payload(
+    mirror: Path,
+    query: str,
+    *,
+    scope: str,
+    limit: int,
+    regex: bool = False,
+    unavailable_message: str,
+) -> dict:
+    """One page of search results, with the total that page came out of."""
+    if scope not in {"title", "fulltext"}:
+        raise RFCError("scope must be 'title' or 'fulltext'")
+
+    populated = is_populated(mirror)
+    if scope == "fulltext":
+        if not populated:
+            raise RFCError(unavailable_message)
+        results, tool, total = search_fulltext(mirror, query, limit)
+        records = load_index(mirror, offline_only=True)
+        for result in results:
+            record = records.get(result["number"])
+            result["header"] = record.header() if record else bare_header(result["number"])
+            result["title"] = record.title if record else ""
+            result["record"] = record.to_dict() if record else None
+        return {
+            "query": query,
+            "scope": "fulltext",
+            "tool": tool,
+            "count": len(results),
+            "total": total,
+            "truncated": total > len(results),
+            "results": results,
+        }
+
+    hits, total = search_titles(load_index(mirror), query, limit, regex)
+    return {
+        "query": query,
+        "scope": "title",
+        "count": len(hits),
+        "total": total,
+        "truncated": total > len(hits),
+        "fulltext_available": populated,
+        "results": [r.to_dict() for r in hits],
+    }
+
+
+def sections_payload(mirror: Path, number: int) -> dict:
+    lines = split_lines(read_document(mirror, number))
+    return {
+        "number": number,
+        "header": header_for(mirror, number),
+        "total_lines": len(lines),
+        "sections": find_sections(lines),
+    }
+
+
+def read_payload(
+    mirror: Path,
+    number: int,
+    *,
+    section: str | None = None,
+    start: int | None = None,
+    end: int | None = None,
+    max_lines: int | None = None,
+    full: bool = False,
+    raw: bool = False,
+    hints: ReadHints,
+) -> dict:
+    """Resolve a read to a line range and return it with its banner.
+
+    A range given as None at either end means "from the beginning" or "to the
+    end"; a section supplies both. Passing a section and a range together is
+    the caller asking for two starting points, which is refused rather than
+    resolved in one of the two directions silently.
+    """
+    lines = split_lines(read_document(mirror, number))
+    scoped = start is not None or end is not None
+
+    section_info = None
+    if section:
+        if scoped:
+            raise RFCError(
+                f"{hints.section_flag} and {hints.range_flag} both choose where to start "
+                f"reading; pass one. Use {hints.cap_flag} to cap how much of a section "
+                "comes back."
+            )
+        first, last, section_info = section_range(find_sections(lines), section, len(lines))
+    elif scoped:
+        first = 1 if start is None else start
+        last = len(lines) if end is None else end
+    else:
+        if not (full or max_lines):
+            check_whole_document(
+                number,
+                len(lines),
+                list_hint=hints.list_hint,
+                override_hint=hints.override_hint,
+            )
+        first, last = 1, len(lines)
+
+    if max_lines:
+        last = min(last, first + max_lines - 1)
+
+    return {
+        "number": number,
+        "header": header_for(mirror, number),
+        "section": section_info,
+        "start_line": first,
+        "end_line": min(last, len(lines)),
+        "total_lines": len(lines),
+        "content": slice_lines(lines, first, last, raw),
+    }
+
+
+# --------------------------------------------------------------------------
 # Sync
 # --------------------------------------------------------------------------
 
@@ -868,9 +1054,11 @@ def _describe_age(seconds: float) -> str:
 
 def cmd_status(args: argparse.Namespace) -> int:
     mirror = resolve_mirror(args.mirror)
-    populated = is_populated(mirror)
-    docs = count_documents(mirror)
     path = index_path(mirror)
+    # is_populated() would glob the mirror a second time to answer the same
+    # question this count already answers.
+    docs = count_documents(mirror)
+    populated = path.exists() and ((mirror / SYNC_STAMP).exists() or docs > POPULATED_THRESHOLD)
 
     index_info: dict = {"present": path.exists(), "path": str(path)}
     lines = [
@@ -883,8 +1071,9 @@ def cmd_status(args: argparse.Namespace) -> int:
         index_info["age_seconds"] = int(age)
         index_info["stale"] = age > INDEX_STALE_SECONDS
         try:
-            entries = len(parse_index(path.read_text(encoding="utf-8", errors="replace")))
-        except OSError:
+            # offline_only: reporting on the index must not go and refresh it.
+            entries = len(load_index(mirror, offline_only=True))
+        except (RFCError, OSError):
             entries = 0
         index_info["entries"] = entries
         lines.append(f"index: {path} ({entries} entries, {_describe_age(age)})")
@@ -946,151 +1135,87 @@ def _truncation_note(shown: int, total: int) -> str:
     return f"\n\n(showing {shown} of {total} — raise --limit for more)"
 
 
-def cmd_search(args: argparse.Namespace) -> int:
-    mirror = resolve_mirror(args.mirror)
-    populated = is_populated(mirror)
-
-    if args.fulltext and not populated:
-        raise RFCError(
-            "full-text search needs a local mirror, which is not present.\n"
-            f"Run `{invocation()} sync` (512 MB, a few minutes) to enable it, or "
-            "search titles by dropping --fulltext.\n"
-            "Not falling back to title search: it would quietly answer a different "
-            "question than the one asked."
-        )
-
-    if args.fulltext:
-        results, tool, total = search_fulltext(mirror, args.query, args.limit)
-        records = load_index(mirror, offline_only=True)
-        enriched = []
-        human = []
-        for result in results:
-            record = records.get(result["number"])
-            header = record.header() if record else f"RFC {result['number']}"
-            enriched.append(
-                {**result, "header": header, "record": record.to_dict() if record else None}
-            )
-            human.append(header)
-            for match in result["matches"]:
-                human.append(f"   {match['line']}: {match['text']}")
-            human.append("")
-        payload = {
-            "query": args.query,
-            "scope": "fulltext",
-            "tool": tool,
-            "count": len(enriched),
-            "total": total,
-            "truncated": total > len(enriched),
-            "results": enriched,
-        }
-        text = "\n".join(human).strip() or "no matches"
-        text += _truncation_note(len(enriched), total)
-        _emit(payload, text, args.json)
-        return 0
-
-    records = load_index(mirror)
-    hits, total = search_titles(records, args.query, args.limit, args.regex)
-    payload = {
-        "query": args.query,
-        "scope": "title",
-        "count": len(hits),
-        "total": total,
-        "truncated": total > len(hits),
-        "results": [r.to_dict() for r in hits],
-    }
-    if hits:
-        human = "\n".join(r.header() for r in hits)
-        human += _truncation_note(len(hits), total)
-        if not populated:
-            human += f"\n\n(titles only — `{invocation()} sync` enables full-text search)"
+def _search_human(payload: dict) -> str:
+    rows = payload["results"]
+    if not rows:
+        return "no matches"
+    if payload["scope"] == "fulltext":
+        lines: list[str] = []
+        for row in rows:
+            lines.append(row["header"])
+            lines += [f"   {m['line']}: {m['text']}" for m in row["matches"]]
+            lines.append("")
+        human = "\n".join(lines).strip()
     else:
-        human = "no matches"
-    _emit(payload, human, args.json)
+        human = "\n".join(row["header"] for row in rows)
+    human += _truncation_note(payload["count"], payload["total"])
+    if payload["scope"] == "title" and not payload["fulltext_available"]:
+        human += f"\n\n(titles only — `{invocation()} sync` enables full-text search)"
+    return human
+
+
+def cmd_search(args: argparse.Namespace) -> int:
+    payload = search_payload(
+        resolve_mirror(args.mirror),
+        args.query,
+        scope="fulltext" if args.fulltext else "title",
+        limit=args.limit,
+        regex=args.regex,
+        unavailable_message=fulltext_unavailable_message(retry_hint="Drop --fulltext"),
+    )
+    _emit(payload, _search_human(payload), args.json)
     return 0
 
 
-def cmd_sections(args: argparse.Namespace) -> int:
-    mirror = resolve_mirror(args.mirror)
-    number = parse_number(args.number)
-    lines = split_lines(read_document(mirror, number))
-    sections = find_sections(lines)
-    header = header_for(mirror, number)
-    human = [header]
-    if sections:
-        human += [
+def _sections_human(payload: dict) -> str:
+    lines = [payload["header"]]
+    if payload["sections"]:
+        lines += [
             f"{'  ' * (s['depth'] - 1)}{s['section']}  {s['title']}  "
             f"(line {s['line']}, {s['lines']} lines)"
-            for s in sections
+            for s in payload["sections"]
         ]
     else:
-        human.append(
+        lines.append(
             "(no numbered headings found — this RFC is not sectioned in the usual "
             "way; use `get --lines A:B`)"
         )
-    payload = {"number": number, "header": header, "total_lines": len(lines), "sections": sections}
-    _emit(payload, "\n".join(human), args.json)
+    return "\n".join(lines)
+
+
+def cmd_sections(args: argparse.Namespace) -> int:
+    payload = sections_payload(resolve_mirror(args.mirror), parse_number(args.number))
+    _emit(payload, _sections_human(payload), args.json)
     return 0
 
 
-def header_for(mirror: Path, number: int) -> str:
-    """Best-effort banner.
-
-    Worth fetching the index for if it is missing, because the obsolescence
-    warning is the main thing this adds over reading the document directly. But
-    a missing index must never block reading: fall back to a bare banner.
-    """
-    try:
-        record = load_index(mirror).get(number)
-    except RFCError:
-        record = None
-    return record.header() if record else f"RFC {number}"
-
-
 def cmd_get(args: argparse.Namespace) -> int:
-    mirror = resolve_mirror(args.mirror)
     number = parse_number(args.number)
-    lines = split_lines(read_document(mirror, number))
-    header = header_for(mirror, number)
-
-    section_info = None
-    if args.section:
-        if args.lines:
-            raise RFCError(
-                "--section and --lines both choose where to start reading; pass one. "
-                "Use --max-lines to cap how much of a section comes back."
-            )
-        sections = find_sections(lines)
-        start, end, section_info = section_range(sections, args.section, len(lines))
-    elif args.lines:
+    start = end = None
+    if args.lines:
         match = re.fullmatch(r"(\d+):(\d+)?", args.lines.strip())
         if not match:
             raise RFCError(f"--lines wants START:END, got {args.lines!r}")
         start = int(match.group(1))
-        end = int(match.group(2)) if match.group(2) else len(lines)
-    else:
-        if not (args.full or args.max_lines):
-            check_whole_document(
-                number,
-                len(lines),
-                list_hint=f"{invocation()} sections {number}",
-                override_hint="--full",
-            )
-        start, end = 1, len(lines)
-
-    if args.max_lines:
-        end = min(end, start + args.max_lines - 1)
-
-    body = slice_lines(lines, start, end, args.raw)
-    payload = {
-        "number": number,
-        "header": header,
-        "section": section_info,
-        "start_line": start,
-        "end_line": min(end, len(lines)),
-        "total_lines": len(lines),
-        "content": body,
-    }
-    _emit(payload, f"{header}\n\n{body}", args.json)
+        end = int(match.group(2)) if match.group(2) else None
+    payload = read_payload(
+        resolve_mirror(args.mirror),
+        number,
+        section=args.section,
+        start=start,
+        end=end,
+        max_lines=args.max_lines,
+        full=args.full,
+        raw=args.raw,
+        hints=ReadHints(
+            list_hint=f"{invocation()} sections {number}",
+            override_hint="--full",
+            section_flag="--section",
+            range_flag="--lines",
+            cap_flag="--max-lines",
+        ),
+    )
+    _emit(payload, f"{payload['header']}\n\n{payload['content']}", args.json)
     return 0
 
 

@@ -13,6 +13,7 @@ them unchanged — so they are called directly.
 from __future__ import annotations
 
 import importlib
+import json
 import os
 from pathlib import Path
 
@@ -188,7 +189,10 @@ def test_a_long_rfc_with_no_section_is_refused(isolated_mirror, monkeypatch):
 
     refused = server.get_rfc(9110)
     assert "error" in refused
+    # Named the way this surface is called, not the way the CLI is typed.
     assert "list_sections(9110)" in refused["error"]
+    assert "full=true" in refused["error"]
+    assert "--full" not in refused["error"]
 
     # ...and the documented ways through it work.
     assert "error" not in server.get_rfc(9110, full=True)
@@ -200,3 +204,51 @@ def test_section_and_start_line_together_are_refused(isolated_mirror, monkeypatc
     monkeypatch.setattr(rfc, "_fetch", offline)
     result = server.get_rfc(4242, section="1", start_line=2)
     assert "error" in result
+    assert "start_line" in result["error"]
+    assert "max_lines" in result["error"]
+    assert "--" not in result["error"], "the model has no command line to type flags on"
+
+
+# --------------------------------------------------------------------------
+# Parity with the CLI
+# --------------------------------------------------------------------------
+#
+# The two surfaces used to assemble their payloads separately and had drifted
+# — one carried the search backend's name, the other a bare title where the
+# first carried a whole record. `make check-vendor` cannot see that: it holds
+# rfc.py identical across its copies, and the adapters are outside it. These
+# are that check, at the layer that actually drifted.
+
+
+def _cli(capsys, argv: list[str]) -> dict:
+    assert rfc.main([*argv, "--json"]) == 0
+    return json.loads(capsys.readouterr().out)
+
+
+@pytest.fixture
+def sectioned(isolated_mirror, monkeypatch) -> Path:
+    (isolated_mirror / "rfc4242.txt").write_text(
+        "1. Introduction\nintro prose\n\n2. Body\nbody prose\n", encoding="utf-8"
+    )
+    (isolated_mirror / "rfc-index.txt").write_text(INDEX_EXCERPT, encoding="utf-8")
+    monkeypatch.setattr(rfc, "_fetch", offline)
+    return isolated_mirror
+
+
+def test_get_answers_identically_on_both_surfaces(sectioned, capsys):
+    assert server.get_rfc(4242, section="1") == _cli(capsys, ["get", "4242", "--section", "1"])
+
+
+def test_a_line_range_answers_identically_on_both_surfaces(sectioned, capsys):
+    assert server.get_rfc(4242, start_line=2, max_lines=2) == _cli(
+        capsys, ["get", "4242", "--lines", "2:", "--max-lines", "2"]
+    )
+
+
+def test_list_sections_answers_identically_on_both_surfaces(sectioned, capsys):
+    assert server.list_sections(4242) == _cli(capsys, ["sections", "4242"])
+
+
+def test_a_title_search_answers_identically_on_both_surfaces(sectioned, capsys):
+    query = "hypertext transfer"
+    assert server.search_rfcs(query) == _cli(capsys, ["search", query])

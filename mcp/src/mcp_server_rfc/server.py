@@ -73,22 +73,18 @@ def _fail(message: str) -> dict:
     return {"error": message}
 
 
-def _no_mirror_message() -> str:
-    where = (
-        "There is no RFC mirror on the machine running this server. It is "
-        "answering over HTTP, so that machine may not be yours: if it is, run "
-        f"`{rfc.invocation()} sync` there; if it is not, full-text search is "
-        "unavailable on this instance and there is nothing to install."
-        if _over_http
-        else "Full-text search needs a local RFC mirror, which is not present. "
-        "The user can create one by running "
-        f"`{rfc.invocation()} sync` in any shell on this machine "
-        "(512 MB, a few minutes)."
-    )
-    return (
-        f"{where} Searching titles instead would answer a different question, "
-        "so this is an error rather than a fallback. Retry with scope='title' "
-        "if a title search is what you want."
+def _read_hints(number: int) -> rfc.ReadHints:
+    """How this surface spells the flags a read error names.
+
+    The model calls tools, not a command line, so a refusal that says
+    `--section` is telling it to type something it has no way to type.
+    """
+    return rfc.ReadHints(
+        list_hint=f"list_sections({number})",
+        override_hint="full=true",
+        section_flag="section",
+        range_flag="start_line",
+        cap_flag="max_lines",
     )
 
 
@@ -105,39 +101,16 @@ def _no_mirror_message() -> str:
     ),
 )
 def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
-    mirror = _mirror()
-    if scope not in {"title", "fulltext"}:
-        return _fail("scope must be 'title' or 'fulltext'")
-
     try:
-        if scope == "fulltext":
-            if not rfc.is_populated(mirror):
-                return _fail(_no_mirror_message())
-            results, _, total = rfc.search_fulltext(mirror, query, limit)
-            records = rfc.load_index(mirror, offline_only=True)
-            for result in results:
-                record = records.get(result["number"])
-                result["header"] = record.header() if record else f"RFC {result['number']}"
-                result["title"] = record.title if record else ""
-            return {
-                "query": query,
-                "scope": scope,
-                "count": len(results),
-                "total": total,
-                "truncated": total > len(results),
-                "results": results,
-            }
-
-        hits, total = rfc.search_titles(rfc.load_index(mirror), query, limit)
-        return {
-            "query": query,
-            "scope": scope,
-            "count": len(hits),
-            "total": total,
-            "truncated": total > len(hits),
-            "fulltext_available": rfc.is_populated(mirror),
-            "results": [r.to_dict() for r in hits],
-        }
+        return rfc.search_payload(
+            _mirror(),
+            query,
+            scope=scope,
+            limit=limit,
+            unavailable_message=rfc.fulltext_unavailable_message(
+                retry_hint="Retry with scope='title'", remote=_over_http
+            ),
+        )
     except rfc.RFCError as exc:
         return _fail(str(exc))
 
@@ -155,15 +128,8 @@ def search_rfcs(query: str, scope: str = "title", limit: int = 20) -> dict:
     ),
 )
 def list_sections(number: int) -> dict:
-    mirror = _mirror()
     try:
-        lines = rfc.split_lines(rfc.read_document(mirror, number))
-        return {
-            "number": number,
-            "header": rfc.header_for(mirror, number),
-            "total_lines": len(lines),
-            "sections": rfc.find_sections(lines),
-        }
+        return rfc.sections_payload(_mirror(), number)
     except rfc.RFCError as exc:
         return _fail(str(exc))
 
@@ -192,43 +158,16 @@ def get_rfc(
     max_lines: int | None = None,
     full: bool = False,
 ) -> dict:
-    mirror = _mirror()
     try:
-        lines = rfc.split_lines(rfc.read_document(mirror, number))
-        header = rfc.header_for(mirror, number)
-
-        section_info = None
-        if section:
-            if start_line:
-                return _fail(
-                    "section and start_line both choose where to start reading; pass "
-                    "one. Use max_lines to cap how much of a section comes back."
-                )
-            sections = rfc.find_sections(lines)
-            start, end, section_info = rfc.section_range(sections, section, len(lines))
-        else:
-            if not (full or start_line or max_lines):
-                rfc.check_whole_document(
-                    number,
-                    len(lines),
-                    list_hint=f"list_sections({number})",
-                    override_hint="full=true",
-                )
-            start = start_line or 1
-            end = len(lines)
-
-        if max_lines:
-            end = min(end, start + max_lines - 1)
-
-        return {
-            "number": number,
-            "header": header,
-            "section": section_info,
-            "start_line": start,
-            "end_line": min(end, len(lines)),
-            "total_lines": len(lines),
-            "content": rfc.slice_lines(lines, start, end, raw=False),
-        }
+        return rfc.read_payload(
+            _mirror(),
+            number,
+            section=section,
+            start=start_line,
+            max_lines=max_lines,
+            full=full,
+            hints=_read_hints(number),
+        )
     except rfc.RFCError as exc:
         return _fail(str(exc))
 

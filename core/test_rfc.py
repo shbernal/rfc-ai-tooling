@@ -547,6 +547,45 @@ def test_grep_is_the_fallback(monkeypatch):
     assert rfc._search_tool() == ("grep", False)
 
 
+def test_a_fulltext_row_carries_the_record_and_the_title_and_the_backend(mirror, backend):
+    """The payload is the union of what the two surfaces used to return
+    separately: one had the record, the other the title, neither had both."""
+    (mirror / "rfc-index.txt").write_text(INDEX_EXCERPT, encoding="utf-8")
+    (mirror / "rfc2616.txt").write_text("widget\n", encoding="utf-8")
+    payload = rfc.search_payload(
+        mirror, "widget", scope="fulltext", limit=10, unavailable_message="unused"
+    )
+    assert payload["tool"] == backend
+    row = next(r for r in payload["results"] if r["number"] == 2616)
+    assert row["title"] == "Hypertext Transfer Protocol -- HTTP/1.1"
+    assert row["record"]["obsolete"] is True
+    assert "OBSOLETED BY" in row["header"]
+
+
+def test_a_fulltext_row_for_an_unindexed_rfc_still_has_every_key(mirror, backend):
+    (mirror / "rfc-index.txt").write_text(INDEX_EXCERPT, encoding="utf-8")
+    payload = rfc.search_payload(
+        mirror, "widget", scope="fulltext", limit=10, unavailable_message="unused"
+    )
+    row = payload["results"][0]
+    assert row["header"] == f"RFC {row['number']}"
+    assert row["title"] == ""
+    assert row["record"] is None
+
+
+def test_an_unsynced_fulltext_search_raises_the_message_it_was_handed(tmp_path):
+    """The reason is the core's; the way out belongs to whoever is being told."""
+    with pytest.raises(rfc.RFCError, match="go and sync"):
+        rfc.search_payload(
+            tmp_path, "widget", scope="fulltext", limit=10, unavailable_message="go and sync"
+        )
+
+
+def test_an_unknown_scope_is_refused(tmp_path):
+    with pytest.raises(rfc.RFCError, match="scope must be"):
+        rfc.search_payload(tmp_path, "widget", scope="everything", limit=10, unavailable_message="")
+
+
 def test_with_neither_backend_the_error_names_both(monkeypatch):
     monkeypatch.setattr(rfc.shutil, "which", lambda name: None)
     with pytest.raises(rfc.RFCError) as excinfo:
