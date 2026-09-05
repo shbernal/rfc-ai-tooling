@@ -9,6 +9,7 @@ document of each generation is marked `network` and excluded from CI.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -205,6 +206,24 @@ def test_documents_without_numbered_headings_yield_no_sections():
     assert rfc.find_sections(lines) == []
 
 
+def test_a_range_running_off_either_end_is_clamped(document):
+    """Line numbers reach this function from elsewhere — a search hit, a
+    section listing taken before a refresh — and one that overshoots is a read
+    of what is there, not an error."""
+    whole = rfc.slice_lines(document, 1, len(document), raw=True)
+    assert rfc.slice_lines(document, -5, len(document) + 100, raw=True) == whole
+
+
+def test_an_inverted_range_is_empty(document):
+    assert rfc.slice_lines(document, 5, 4, raw=False) == ""
+
+
+def test_blank_runs_collapse_and_the_edges_are_trimmed():
+    """Stripping page furniture leaves the blank lines that surrounded it."""
+    lines = ["", "", "first", "", "", "", "second", "", ""]
+    assert rfc._collapse_blank_runs(lines) == "first\n\nsecond"
+
+
 # --------------------------------------------------------------------------
 # Mode detection
 # --------------------------------------------------------------------------
@@ -399,6 +418,145 @@ def test_fulltext_without_a_mirror_errors_rather_than_degrading(tmp_path, monkey
 
 
 # --------------------------------------------------------------------------
+# Full-text search
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mirror(tmp_path) -> Path:
+    """A populated mirror small enough to reason about by hand.
+
+    The documents are asymmetric on purpose: rfc1000 carries three hits on one
+    line, rfc2000 two hits on two lines, rfc3000 none. A ranking by total
+    matches and a ranking by matching lines therefore disagree about which of
+    the first two comes first.
+    """
+    (tmp_path / "rfc1000.txt").write_text("alpha\nwidget widget widget\nomega\n", encoding="utf-8")
+    (tmp_path / "rfc2000.txt").write_text("alpha widget\nfiller\nomega widget\n", encoding="utf-8")
+    (tmp_path / "rfc3000.txt").write_text("nothing to see here\n", encoding="utf-8")
+    rfc.index_path(tmp_path).write_text("", encoding="utf-8")
+    (tmp_path / rfc.SYNC_STAMP).touch()
+    assert rfc.is_populated(tmp_path)
+    return tmp_path
+
+
+@pytest.fixture(params=[("rg", True), ("grep", False)], ids=["rg", "grep"])
+def backend(request, monkeypatch) -> str:
+    """Run the test against one named backend, skipping if this machine has no
+    such tool. CI has both; a contributor may have only one."""
+    tool = request.param[0]
+    if not shutil.which(tool):
+        pytest.skip(f"{tool} is not on PATH")
+    monkeypatch.setattr(rfc, "_search_tool", lambda: request.param)
+    return tool
+
+
+def test_the_backends_rank_the_same_corpus_differently(mirror, backend):
+    """`rg --count-matches` counts every match; `grep -c` counts matching
+    lines. So rfc1000's three hits on one line score 3 under one backend and 1
+    under the other, and the two orderings disagree. Asserted as it stands, so
+    that normalising it reads as a deliberate edit here rather than silence.
+    """
+    results, tool, total = rfc.search_fulltext(mirror, "widget", limit=10)
+    assert tool == backend
+    assert total == 2, "rfc3000 matches nothing and must not be ranked"
+    ranked = [(r["number"], r["hits"]) for r in results]
+    assert ranked == ([(1000, 3), (2000, 2)] if backend == "rg" else [(2000, 2), (1000, 1)])
+
+
+def test_matches_carry_line_numbers_that_index_the_file(mirror, backend):
+    results, _, _ = rfc.search_fulltext(mirror, "widget", limit=10)
+    hit = next(r for r in results if r["number"] == 2000)
+    assert [(m["line"], m["text"]) for m in hit["matches"]] == [
+        (1, "alpha widget"),
+        (3, "omega widget"),
+    ]
+
+
+def test_the_limit_pages_the_ranking_without_hiding_the_total(mirror, backend):
+    results, _, total = rfc.search_fulltext(mirror, "widget", limit=1)
+    assert len(results) == 1
+    assert total == 2
+
+
+def test_matched_lines_are_capped_per_document_but_the_score_is_not(mirror, backend):
+    """What the two passes are for: the cap bounds what comes back without
+    flattening the count that ordered it."""
+    results, _, _ = rfc.search_fulltext(mirror, "widget", limit=10, max_lines_per_doc=1)
+    hit = next(r for r in results if r["number"] == 2000)
+    assert len(hit["matches"]) == 1
+    assert hit["hits"] == 2
+
+
+def test_a_query_nothing_matches_comes_back_empty(mirror, backend):
+    results, _, total = rfc.search_fulltext(mirror, "zzzunmatchable", limit=10)
+    assert results == []
+    assert total == 0
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/mirror/rfc1234.txt", 1234),
+        ("rfc791.txt", 791),
+        ("/mirror/rfc-index.txt", None),
+        ("/mirror/notes.txt", None),
+    ],
+)
+def test_a_document_number_is_read_off_the_filename(path, expected):
+    assert rfc._number_from_path(path) == expected
+
+
+def test_a_zero_count_line_is_not_a_result(tmp_path, monkeypatch):
+    """`grep -rc` reports every file it read, matches or not, as `path:0`."""
+    monkeypatch.setattr(rfc, "_search_tool", lambda: ("grep", False))
+    monkeypatch.setattr(rfc, "_run_search", lambda cmd: [f"{rfc.document_path(tmp_path, 3000)}:0"])
+    results, _, total = rfc.search_fulltext(tmp_path, "widget", limit=10)
+    assert results == []
+    assert total == 0
+
+
+def test_no_matches_is_an_empty_list_rather_than_a_failure(tmp_path):
+    """Both rg and grep exit 1 when they matched nothing, which is an answer."""
+    empty = tmp_path / "empty.txt"
+    empty.write_text("", encoding="utf-8")
+    assert rfc._run_search(["grep", "widget", str(empty)]) == []
+
+
+def test_a_real_search_failure_carries_the_tools_own_message(tmp_path):
+    missing = tmp_path / "absent.txt"
+    with pytest.raises(rfc.RFCError, match="search failed") as excinfo:
+        rfc._run_search(["grep", "widget", str(missing)])
+    assert "absent.txt" in str(excinfo.value)
+
+
+def test_a_backend_that_is_not_there_raises_the_projects_own_error():
+    """An OSError out of subprocess would escape as a traceback rather than as
+    the CLI's one-line refusal."""
+    with pytest.raises(rfc.RFCError, match="could not run"):
+        rfc._run_search(["rfc-tooling-no-such-binary", "widget"])
+
+
+def test_ripgrep_is_preferred_when_it_is_there(monkeypatch):
+    monkeypatch.setattr(rfc.shutil, "which", lambda name: f"/usr/bin/{name}")
+    assert rfc._search_tool() == ("rg", True)
+
+
+def test_grep_is_the_fallback(monkeypatch):
+    monkeypatch.setattr(rfc.shutil, "which", lambda name: None if name == "rg" else "/usr/bin/grep")
+    assert rfc._search_tool() == ("grep", False)
+
+
+def test_with_neither_backend_the_error_names_both(monkeypatch):
+    monkeypatch.setattr(rfc.shutil, "which", lambda name: None)
+    with pytest.raises(rfc.RFCError) as excinfo:
+        rfc._search_tool()
+    message = str(excinfo.value)
+    assert "rg" in message
+    assert "grep" in message
+
+
+# --------------------------------------------------------------------------
 # How to re-run this program
 # --------------------------------------------------------------------------
 
@@ -517,6 +675,33 @@ def test_an_explicitly_scoped_read_is_never_guarded(long_document, capsys):
     out = capsys.readouterr().out
     assert "line 10" in out
     assert "line 1900" not in out
+
+
+# --------------------------------------------------------------------------
+# What `get` refuses
+# --------------------------------------------------------------------------
+
+
+def test_a_section_and_a_line_range_together_are_refused(long_document, capsys):
+    """Both answer the same question, and picking one silently would read
+    something other than what was asked for."""
+    assert rfc.main(["get", "9110", "--section", "1", "--lines", "2:3"]) == 1
+    stderr = capsys.readouterr().err
+    assert "--section" in stderr
+    assert "--lines" in stderr
+
+
+def test_a_malformed_line_range_names_the_form_it_wants(long_document, capsys):
+    assert rfc.main(["get", "9110", "--lines", "nonsense"]) == 1
+    assert "START:END" in capsys.readouterr().err
+
+
+def test_an_open_ended_range_reads_to_the_end(long_document, capsys):
+    assert rfc.main(["get", "9110", "--lines", "10:"]) == 0
+    body = capsys.readouterr().out.splitlines()
+    assert "line 9" in body, "line 10 of the file"
+    assert "line 8" not in body
+    assert "line 1999" in body
 
 
 # --------------------------------------------------------------------------
@@ -710,6 +895,23 @@ def test_refresh_cadence_and_the_staleness_warning_are_separate(tmp_path, capsys
     index_info = json.loads(capsys.readouterr().out)["index"]
     assert index_info["age_seconds"] > rfc.INDEX_TTL_SECONDS
     assert index_info["stale"] is False
+
+
+# --------------------------------------------------------------------------
+# The vendoring rule
+# --------------------------------------------------------------------------
+
+
+def test_the_vendored_copies_are_byte_identical_to_the_core():
+    """`make check-vendor` says this too, but only in CI — which is late for a
+    contributor who edited a copy and watched pytest go green."""
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "core" / "rfc.py").read_bytes()
+    for copy in (
+        root / "skill" / "scripts" / "rfc.py",
+        root / "mcp" / "src" / "mcp_server_rfc" / "rfc.py",
+    ):
+        assert copy.read_bytes() == source, f"{copy} drifted from core/rfc.py; run `make sync-core`"
 
 
 # --------------------------------------------------------------------------
