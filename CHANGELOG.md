@@ -41,6 +41,12 @@ code announces that something used to work differently.
 - **A full-text search that runs longer than 60 seconds is an error** naming
   the backend, instead of holding the caller for as long as a slow disk, a
   network filesystem or a pathological `--regex` pattern takes.
+- **Concurrent tool calls no longer collide writing the mirror.** The
+  temporary file a download is written through was named after the process,
+  and the MCP server runs tool calls on worker threads under one PID, so two
+  calls fetching the same RFC — or the index, past its TTL — renamed each
+  other's file. The index write surfaced that as an unexplained
+  `Error executing tool search_rfcs`. The name is unique per thread now.
 
 The rest are in the MCP server's environment configuration; the skill is
 unaffected.

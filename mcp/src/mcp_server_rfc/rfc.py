@@ -28,6 +28,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -399,8 +400,14 @@ def _write_atomically(path: Path, data: bytes) -> None:
     truncated document is only ever checked for existence, so nothing repairs
     it. The temporary file is a sibling because os.replace is atomic within a
     filesystem and not across one.
+
+    The name is unique per thread, not only per process: the MCP server runs
+    tool calls on worker threads, and two of them fetching the same RFC under
+    one PID would truncate and rename each other's temporary file. Not
+    mkstemp, which creates the file 0600 where every other file in the mirror
+    follows the umask.
     """
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.part")
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.part")
     try:
         tmp.write_bytes(data)
         os.replace(tmp, path)
@@ -483,6 +490,10 @@ def ensure_index(
 # The last parse, kept against the identity of the file it came from. Callers
 # never mutate what parse_index returns — every write to a Record happens while
 # parse_index is still building it — so one dict can be shared.
+#
+# Threads race on this without a lock, and that was considered: two of them
+# missing at once each parse and the later assignment wins, but both entries
+# are correct for their key. The cost is a duplicated parse, not a wrong answer.
 _index_cache: tuple[tuple[str, int, int], dict[int, Record]] | None = None
 
 

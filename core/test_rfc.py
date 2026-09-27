@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -280,6 +281,33 @@ def test_an_interrupted_write_leaves_the_previous_file_untouched(tmp_path, monke
 
     assert path.read_text(encoding="utf-8") == "the index that was already there\n"
     assert list(tmp_path.glob("*.part")) == [], "the half-written file outlived the failure"
+
+
+def test_concurrent_writes_in_one_process_do_not_collide(tmp_path):
+    """The MCP server calls tools on worker threads under one PID, and a
+    temporary name unique only per process was shared between them: one
+    thread's replace moved the file the other was about to rename."""
+    target = tmp_path / "rfc1.txt"
+    errors = []
+
+    def write(byte):
+        for _ in range(20):
+            try:
+                rfc._write_atomically(target, byte * 1_000_000)
+            except Exception as exc:
+                errors.append(exc)
+
+    threads = [threading.Thread(target=write, args=(b,)) for b in (b"A", b"B")]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert errors == []
+    data = target.read_bytes()
+    assert len(data) == 1_000_000
+    assert len(set(data)) == 1, "the file holds more than one writer's bytes"
+    assert list(tmp_path.glob("*.part")) == []
 
 
 def test_a_document_that_cannot_be_cached_is_still_returned(tmp_path, monkeypatch):
