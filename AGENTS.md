@@ -30,16 +30,18 @@ independent code.
 make sync-core     # copy core/rfc.py into both surfaces — run after any core edit
 make test          # pytest, no network (network-marked tests are excluded)
 make lint          # ruff check + format --check
+make typecheck     # mypy over core/rfc.py, server.py and smoke.py
 make format        # ruff format .
 make check-vendor  # verify vendored copies match core/rfc.py
 make smoke-local   # stdio JSON-RPC session against the *working tree*
 make smoke         # the same session against the *published* PyPI server
 ```
 
-Run `make sync-core lint test` before committing any change to `core/rfc.py`.
+Run `make sync-core lint typecheck test` before committing any change to
+`core/rfc.py`.
 
-`pytest` and `ruff` are dev dependencies, so the targets that need them run
-through `uv run`, which syncs the environment on demand — no activated venv
+`pytest`, `ruff` and `mypy` are dev dependencies, so the targets that need them
+run through `uv run`, which syncs the environment on demand — no activated venv
 required. `make test RUN=` calls the bare commands instead, for an environment
 you manage yourself.
 

@@ -37,6 +37,15 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
 
+  typecheck:
+    # The MCP SDK builds each tool's JSON schema from server.py's annotations,
+    # so there they are the contract the model is handed, not documentation.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+      - run: uv run mypy
+
   vendor:
     # The shared core is copied into both surfaces rather than imported. If a
     # copy drifts, the skill and the MCP server quietly stop behaving the same

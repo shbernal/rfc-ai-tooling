@@ -14,6 +14,20 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
+[tool.mypy]
+# The floor rail, so the checker reads the language the oldest supported
+# interpreter does.
+python_version = "3.10"
+# core/rfc.py is the implementation; the two vendored copies are byte-identical
+# to it, so checking them again only repeats its errors. server.py imports one
+# of them, which is why the import is followed silently rather than excluded.
+files = ["core/rfc.py", "mcp/src/mcp_server_rfc/server.py", "mcp/smoke.py"]
+mypy_path = "mcp/src"
+
+[[tool.mypy.overrides]]
+module = "mcp_server_rfc.rfc"
+follow_imports = "silent"
+
 [tool.pytest.ini_options]
 # core/ tests the implementation; mcp/tests tests the adapter around it. The
 # adapter's tests need the mcp SDK, which is why it is a dev dependency below
@@ -34,4 +48,5 @@ dev = [
     # root resolves to the mcp/ directory as an empty namespace package
     # instead of failing. Installing the real SDK keeps that name honest.
     "mcp>=2.2.0",
+    "mypy>=2.3.1",
 ]

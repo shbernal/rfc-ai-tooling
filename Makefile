@@ -5,13 +5,13 @@ VENDORED := skill/scripts/rfc.py mcp/src/mcp_server_rfc/rfc.py
 # uploaded; a test asserts the two agree.
 VERSION := $(shell grep -m1 '^version = ' mcp/pyproject.toml | cut -d'"' -f2)
 
-# pytest and ruff are dev dependencies, not system commands, so calling them
-# bare only works inside an activated venv. `uv run` creates and syncs the venv
-# on demand, which makes these targets work in a fresh shell. Override to use
-# an environment you manage yourself: `make test RUN=` in an active venv.
+# pytest, ruff and mypy are dev dependencies, not system commands, so calling
+# them bare only works inside an activated venv. `uv run` creates and syncs the
+# venv on demand, which makes these targets work in a fresh shell. Override to
+# use an environment you manage yourself: `make test RUN=` in an active venv.
 RUN ?= uv run
 
-.PHONY: sync-core check-vendor test lint format smoke smoke-local print-version
+.PHONY: sync-core check-vendor test lint typecheck format smoke smoke-local print-version
 
 # For the container recipe in AGENTS.md, which needs the version on a command
 # line built outside this Makefile.
@@ -80,6 +80,11 @@ smoke:
 lint:
 	$(RUN) ruff check .
 	$(RUN) ruff format --check .
+
+# What to check lives in [tool.mypy] in pyproject.toml, so a bare `mypy` agrees
+# with this target.
+typecheck:
+	$(RUN) mypy
 
 format:
 	$(RUN) ruff format .

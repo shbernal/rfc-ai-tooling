@@ -367,9 +367,14 @@ def _fetch(
     url: str,
     if_modified_since: float | None = None,
     etag: str | None = None,
-    want_etag: bool = False,
-) -> bytes | None | tuple[bytes | None, str | None]:
-    """GET a URL. Returns None (or (None, etag)) if the server answers 304."""
+) -> tuple[bytes | None, str | None]:
+    """GET a URL, returning the body and the response's ETag.
+
+    The body is None when the server answers 304, which only a conditional
+    request can draw. One return shape for every caller: this is the seam the
+    tests replace to stand in for the network, and a shape that depended on an
+    argument made each caller assert by hand which one it had been given.
+    """
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     if if_modified_since is not None:
         request.add_header("If-Modified-Since", formatdate(if_modified_since, usegmt=True))
@@ -377,13 +382,10 @@ def _fetch(
         request.add_header("If-None-Match", etag)
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            body = response.read()
-            if want_etag:
-                return body, response.headers.get("ETag")
-            return body
+            return response.read(), response.headers.get("ETag")
     except urllib.error.HTTPError as exc:
         if exc.code == 304:
-            return (None, etag) if want_etag else None
+            return None, etag
         if exc.code == 404:
             raise RFCError(f"not found: {url}") from exc
         raise RFCError(f"HTTP {exc.code} fetching {url}") from exc
@@ -462,17 +464,15 @@ def ensure_index(
         known_etag = etag_path.read_text(encoding="utf-8").strip() or None
 
     try:
-        result = _fetch(
+        data, etag = _fetch(
             INDEX_URL,
             if_modified_since=path.stat().st_mtime if path.exists() else None,
             etag=known_etag,
-            want_etag=True,
         )
     except RFCError:
         if not path.exists():
             raise  # Nothing to fall back to; the caller has to hear about it.
         return path, False
-    data, etag = result  # type: ignore[misc]
 
     if data is None:
         path.touch()
@@ -549,7 +549,7 @@ def read_document(mirror: Path, number: int) -> str:
     path = document_path(mirror, number)
     if path.exists():
         return path.read_text(encoding="utf-8", errors="replace")
-    data = _fetch(RFC_URL.format(number=number))
+    data, _ = _fetch(RFC_URL.format(number=number))
     if data is None:
         raise RFCError(f"RFC {number} could not be retrieved")
     text = data.decode("utf-8", errors="replace")
@@ -612,7 +612,7 @@ def find_sections(lines: list[str], mask: list[bool] | None = None) -> list[dict
     """
     if mask is None:
         mask = furniture_mask(lines)
-    sections = []
+    sections: list[dict] = []
     expected_top = 1
     for i, line in enumerate(lines):
         if mask[i]:
@@ -868,7 +868,7 @@ def search_fulltext(
 
     results = []
     for matching_lines, number in counts[:limit]:
-        path = document_path(mirror, number)
+        document = document_path(mirror, number)
         # --no-filename / -h keep the output shape at "line:text" for both tools.
         if is_rg:
             line_cmd = [
@@ -885,7 +885,7 @@ def search_fulltext(
                 *([] if use_regex else ["-F"]),
                 "-e",
                 query,
-                str(path),
+                str(document),
             ]
         else:
             line_cmd = [
@@ -895,7 +895,7 @@ def search_fulltext(
                 str(max_lines_per_doc),
                 "--",
                 query,
-                str(path),
+                str(document),
             ]
         matches = []
         for line in _run_search(line_cmd):

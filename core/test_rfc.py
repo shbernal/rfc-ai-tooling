@@ -312,7 +312,7 @@ def test_concurrent_writes_in_one_process_do_not_collide(tmp_path):
 
 def test_a_document_that_cannot_be_cached_is_still_returned(tmp_path, monkeypatch):
     """A read-only mirror costs the cache, not the answer."""
-    monkeypatch.setattr(rfc, "_fetch", lambda url, **kw: b"body line\n")
+    monkeypatch.setattr(rfc, "_fetch", lambda url, **kw: (b"body line\n", None))
     monkeypatch.setattr(rfc.os, "replace", _explode)
 
     assert rfc.read_document(tmp_path, 4242) == "body line\n"
@@ -1078,14 +1078,14 @@ def test_reading_a_document_does_not_consult_the_index(tmp_path, monkeypatch):
 
     def fake_fetch(url, **kwargs):
         assert url.endswith("rfc99999.txt")
-        return b"Contents of a very new RFC.\n"
+        return b"Contents of a very new RFC.\n", None
 
     monkeypatch.setattr(rfc, "_fetch", fake_fetch)
     assert "very new RFC" in rfc.read_document(tmp_path, 99999)
 
 
 def test_a_fetched_document_is_cached(tmp_path, monkeypatch):
-    monkeypatch.setattr(rfc, "_fetch", lambda url, **kwargs: b"body\n")
+    monkeypatch.setattr(rfc, "_fetch", lambda url, **kwargs: (b"body\n", None))
     rfc.read_document(tmp_path, 4242)
     assert (tmp_path / "rfc4242.txt").read_text() == "body\n"
 
