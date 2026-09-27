@@ -488,6 +488,23 @@ def test_a_limit_below_one_is_refused(records, limit):
         rfc.search_titles(records, "", limit=limit)
 
 
+def test_a_limit_past_the_ceiling_is_refused(records):
+    """The MCP surface takes the limit from the model, over an unauthenticated
+    HTTP deployment too, and a corpus-sized page is megabytes of JSON."""
+    assert rfc.search_titles(records, "", limit=rfc.MAX_SEARCH_LIMIT)
+    with pytest.raises(rfc.RFCError, match=f"at most {rfc.MAX_SEARCH_LIMIT}"):
+        rfc.search_titles(records, "", limit=rfc.MAX_SEARCH_LIMIT + 1)
+
+
+@pytest.mark.parametrize("query", ["", "   "])
+@pytest.mark.parametrize("scope", ["title", "fulltext"])
+def test_an_empty_query_is_refused(tmp_path, scope, query, monkeypatch):
+    """No terms means every title matches all of them, which is the whole index."""
+    monkeypatch.setattr(rfc, "load_index", lambda *a, **kw: pytest.fail("searched anyway"))
+    with pytest.raises(rfc.RFCError, match="query is empty"):
+        rfc.search_payload(tmp_path, query, scope=scope, limit=20, unavailable_message="x")
+
+
 def test_a_truncated_page_still_reports_the_real_total(records):
     """The page size is not the answer.
 
@@ -495,7 +512,7 @@ def test_a_truncated_page_still_reports_the_real_total(records):
     into "20 RFCs mention stateless" — a confident answer to a question
     nobody asked, which is the failure the --fulltext refusal exists to avoid.
     """
-    everything, total = rfc.search_titles(records, "", limit=1000)
+    everything, total = rfc.search_titles(records, "", limit=rfc.MAX_SEARCH_LIMIT)
     page, page_total = rfc.search_titles(records, "", limit=2)
     assert total == len(everything)
     assert total > 2, "fixture too small to truncate; the assertion below is vacuous"
@@ -506,13 +523,22 @@ def test_a_truncated_page_still_reports_the_real_total(records):
 def test_truncation_is_stated_in_the_human_output(records, monkeypatch, tmp_path, capsys):
     monkeypatch.setenv("RFC_MIRROR", str(tmp_path))
     monkeypatch.setattr(rfc, "load_index", lambda *a, **k: records)
-    _, total = rfc.search_titles(records, "", limit=1000)
+    _, total = rfc.search_titles(records, "e", limit=rfc.MAX_SEARCH_LIMIT)
+    assert total > 2, "fixture too small to truncate"
 
-    assert rfc.main(["search", "", "--limit", "2"]) == 0
+    assert rfc.main(["search", "e", "--limit", "2"]) == 0
     assert f"showing 2 of {total}" in capsys.readouterr().out
 
-    assert rfc.main(["search", "", "--limit", "1000"]) == 0
+    assert rfc.main(["search", "e", "--limit", str(rfc.MAX_SEARCH_LIMIT)]) == 0
     assert "showing" not in capsys.readouterr().out
+
+
+def test_a_page_at_the_ceiling_does_not_advise_raising_the_limit():
+    """Past the ceiling, raising --limit is a refusal, not more results."""
+    assert "raise --limit" in rfc._truncation_note(20, 795)
+    note = rfc._truncation_note(rfc.MAX_SEARCH_LIMIT, 795)
+    assert "raise --limit" not in note
+    assert "narrow the query" in note
 
 
 def test_fulltext_without_a_mirror_errors_rather_than_degrading(tmp_path, monkeypatch, capsys):
@@ -631,6 +657,13 @@ def test_a_fulltext_limit_below_one_is_refused(mirror, backend, limit):
         rfc.search_fulltext(mirror, "widget", limit=limit)
 
 
+def test_a_fulltext_limit_past_the_ceiling_is_refused_before_searching(mirror, monkeypatch):
+    """Each result on a full-text page is a process of its own."""
+    monkeypatch.setattr(rfc, "_run_search", lambda cmd: pytest.fail("searched anyway"))
+    with pytest.raises(rfc.RFCError, match=f"at most {rfc.MAX_SEARCH_LIMIT}"):
+        rfc.search_fulltext(mirror, "widget", limit=rfc.MAX_SEARCH_LIMIT + 1)
+
+
 @pytest.mark.parametrize(
     ("path", "expected"),
     [
@@ -665,6 +698,13 @@ def test_a_real_search_failure_carries_the_tools_own_message(tmp_path):
     with pytest.raises(rfc.RFCError, match="search failed") as excinfo:
         rfc._run_search(["grep", "widget", str(missing)])
     assert "absent.txt" in str(excinfo.value)
+
+
+def test_a_search_that_runs_too_long_is_an_error_not_a_hang(monkeypatch):
+    monkeypatch.setattr(rfc, "SEARCH_TIMEOUT_SECONDS", 0.1)
+    with pytest.raises(rfc.RFCError, match="timed out") as excinfo:
+        rfc._run_search(["sleep", "5"])
+    assert "sleep" in str(excinfo.value)
 
 
 def test_a_backend_that_is_not_there_raises_the_projects_own_error():

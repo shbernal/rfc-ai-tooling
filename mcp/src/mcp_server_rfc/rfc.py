@@ -62,6 +62,17 @@ WHOLE_DOCUMENT_LINE_LIMIT = 1500
 # on-demand fetches accumulating in the mirror should not look like a sync.
 POPULATED_THRESHOLD = 1000
 SYNC_STAMP = ".rfc-sync"
+# The largest page a search returns. A page is something a reader reads, and
+# every payload carries `total`, so a cap costs nothing but rows nobody would
+# have read. It also bounds the work: a full-text page spawns one backend
+# process per result to quote its lines, which at a corpus-sized page is
+# minutes inside one tool call.
+MAX_SEARCH_LIMIT = 200
+# How long one backend process may run. The count pass reads the whole mirror,
+# so this is generous for a local disk and exists for the slow cases — a
+# network filesystem, a pathological --regex pattern — that would otherwise
+# hold the caller with nothing to cancel it.
+SEARCH_TIMEOUT_SECONDS = 60
 
 USER_AGENT = f"rfc-ai-tooling/{__version__} (+https://github.com/shbernal/rfc-ai-tooling)"
 
@@ -717,15 +728,21 @@ def _collapse_blank_runs(lines: list[str]) -> str:
 
 
 def _check_limit(limit: int) -> None:
-    """A page of fewer than one result is not a page.
+    """A page of fewer than one result is not a page, nor is the whole corpus.
 
     `hits[:0]` is an empty page under a non-zero total, which renders as "no
     matches"; `hits[:-1]` silently drops the last row while the total still
     counts it. The MCP surface takes this straight from the model, which is
-    where a negative one comes from.
+    where a negative one comes from — and where a limit of 100000 comes from,
+    which is 4 MB of titles or ten minutes of full-text quoting.
     """
     if limit < 1:
         raise RFCError(f"limit must be at least 1, got {limit}")
+    if limit > MAX_SEARCH_LIMIT:
+        raise RFCError(
+            f"limit must be at most {MAX_SEARCH_LIMIT}, got {limit}; the total "
+            "is reported whatever the limit, so a larger page is not needed to count"
+        )
 
 
 def search_titles(
@@ -881,7 +898,14 @@ def search_fulltext(
 
 def _run_search(cmd: list[str]) -> list[str]:
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, check=False, timeout=SEARCH_TIMEOUT_SECONDS
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RFCError(
+            f"search timed out: {cmd[0]} did not finish within {SEARCH_TIMEOUT_SECONDS} "
+            "seconds; try a more specific query"
+        ) from exc
     except OSError as exc:
         raise RFCError(f"could not run {cmd[0]}: {exc}") from exc
     # Exit status 1 means "no matches" for both rg and grep; only 2+ is an error.
@@ -985,6 +1009,10 @@ def search_payload(
     """One page of search results, with the total that page came out of."""
     if scope not in {"title", "fulltext"}:
         raise RFCError("scope must be 'title' or 'fulltext'")
+    # An empty query has no terms, so every title matches all of them: the
+    # "result" is the index. Everything is not an answer to a search.
+    if not query.strip():
+        raise RFCError("query is empty")
 
     populated = is_populated(mirror)
     if scope == "fulltext":
@@ -1254,6 +1282,8 @@ def _truncation_note(shown: int, total: int) -> str:
     """
     if total <= shown:
         return ""
+    if shown >= MAX_SEARCH_LIMIT:
+        return f"\n\n(showing {shown} of {total} — narrow the query for the rest)"
     return f"\n\n(showing {shown} of {total} — raise --limit for more)"
 
 
@@ -1376,7 +1406,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--fulltext", action="store_true", help="search document bodies (needs a synced mirror)"
     )
     p_search.add_argument("--regex", action="store_true", help="treat the query as a regex")
-    p_search.add_argument("--limit", type=int, default=20)
+    p_search.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help=f"results per page (default: 20, at most {MAX_SEARCH_LIMIT})",
+    )
     add_read_flags(p_search)
     p_search.set_defaults(func=cmd_search)
 

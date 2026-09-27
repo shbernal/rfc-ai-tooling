@@ -110,8 +110,9 @@ def _read_hints(number: int) -> rfc.ReadHints:
         "it replaced. A fulltext result's 'matching_lines' is how many of that RFC's "
         "lines matched, which is what ordered the page; 'matches' quotes a few of them. "
         "'count' is how many results this page holds and 'total' is how many matched; "
-        "when 'truncated' is true, report 'total' and raise 'limit' rather than counting "
-        "the results you were given."
+        f"when 'truncated' is true, report 'total' and raise 'limit' (at most "
+        f"{rfc.MAX_SEARCH_LIMIT}) rather "
+        "than counting the results you were given. An empty query is an error."
     ),
 )
 def search_rfcs(query: str, scope: str = "title", limit: int = 20, regex: bool = False) -> dict:

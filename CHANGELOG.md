@@ -10,9 +10,25 @@ code announces that something used to work differently.
 
 ## Unreleased
 
+### Breaking
+
+- **`--limit` / `limit` is capped at 200.** It had a floor and no ceiling, and
+  the MCP server takes it straight from the model: `limit=100000` returned the
+  whole index as 4.4 MB of JSON, and under full text spawned one backend
+  process per result to quote its lines — minutes inside a single call. A
+  larger limit is now an error naming the maximum. `total` is reported whatever
+  the limit, so counting matches never needed a bigger page; for more than 200
+  rows, narrow the query.
+- **An empty query is refused.** A query with no terms matched every title,
+  so `search ""` returned the index rather than a search result.
+
 ### Fixed
 
-All three are in the MCP server's environment configuration; the skill is
+- **A full-text search that runs longer than 60 seconds is an error** naming
+  the backend, instead of holding the caller for as long as a slow disk, a
+  network filesystem or a pathological `--regex` pattern takes.
+
+The rest are in the MCP server's environment configuration; the skill is
 unaffected.
 
 - **An unrecognised `RFC_TRANSPORT` no longer starts an HTTP server.**

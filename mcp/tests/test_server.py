@@ -286,6 +286,17 @@ def test_a_limit_below_one_is_refused(sectioned):
     assert "at least 1" in server.search_rfcs("hypertext", limit=-1)["error"]
 
 
+def test_a_limit_past_the_ceiling_is_refused(sectioned):
+    """The same number, from the same place, in the other direction."""
+    ceiling = rfc.MAX_SEARCH_LIMIT
+    assert "error" not in server.search_rfcs("hypertext", limit=ceiling)
+    assert f"at most {ceiling}" in server.search_rfcs("hypertext", limit=ceiling + 1)["error"]
+
+
+def test_an_empty_query_is_refused(sectioned):
+    assert "query is empty" in server.search_rfcs("")["error"]
+
+
 def test_regex_reaches_the_model_too(sectioned):
     """The switch is one argument on one payload builder, so it has to be
     offered on both surfaces or it is offered on neither."""
