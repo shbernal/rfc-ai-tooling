@@ -20,6 +20,7 @@ import os
 from pathlib import Path
 
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp_server_rfc import rfc, server
 
 FIXTURES = Path(__file__).parents[2] / "core" / "fixtures"
@@ -62,6 +63,14 @@ def _must_not_fetch(*args, **kwargs):
     raise AssertionError("this should have been refused before any network call")
 
 
+def refusal(tool, *args, **kwargs) -> str:
+    """The message a tool refused with. A refusal is raised as ToolError, which
+    the SDK sends as is_error=True with the message for the model to read."""
+    with pytest.raises(ToolError) as raised:
+        tool(*args, **kwargs)
+    return str(raised.value)
+
+
 def stale(path):
     """Age a file past the index TTL so the next load attempts a refresh."""
     when = rfc.time.time() - rfc.INDEX_TTL_SECONDS - 1
@@ -99,7 +108,6 @@ def test_an_unreachable_refresh_still_answers_from_disk(isolated_mirror, monkeyp
     monkeypatch.setattr(rfc, "_fetch", offline)
 
     result = server.search_rfcs("hypertext transfer", scope="title")
-    assert "error" not in result
     assert any(r["number"] == 2616 for r in result["results"])
 
 
@@ -163,12 +171,10 @@ def test_a_document_is_readable_with_no_index_at_all(isolated_mirror, monkeypatc
     monkeypatch.setattr(rfc, "_fetch", offline)
 
     result = server.get_rfc(4242, max_lines=2)
-    assert "error" not in result
     assert result["header"] == "RFC 4242"
     assert "Body line one" in result["content"]
 
     listed = server.list_sections(4242)
-    assert "error" not in listed
     assert listed["header"] == "RFC 4242"
 
 
@@ -178,13 +184,13 @@ def test_a_document_is_readable_with_no_index_at_all(isolated_mirror, monkeypatc
 
 
 def test_fulltext_without_a_mirror_names_what_to_run(isolated_mirror):
-    result = server.search_rfcs("congestion", scope="fulltext")
-    assert "sync" in result["error"]
-    assert "scope='title'" in result["error"]
+    refused = refusal(server.search_rfcs, "congestion", scope="fulltext")
+    assert "sync" in refused
+    assert "scope='title'" in refused
 
 
 def test_an_unknown_scope_is_refused(isolated_mirror):
-    assert "error" in server.search_rfcs("anything", scope="everything")
+    assert "scope" in refusal(server.search_rfcs, "anything", scope="everything")
 
 
 def test_a_long_rfc_with_no_section_is_refused(isolated_mirror, monkeypatch):
@@ -193,16 +199,15 @@ def test_a_long_rfc_with_no_section_is_refused(isolated_mirror, monkeypatch):
     (isolated_mirror / "rfc9110.txt").write_text(body, encoding="utf-8")
     monkeypatch.setattr(rfc, "_fetch", offline)
 
-    refused = server.get_rfc(9110)
-    assert "error" in refused
+    refused = refusal(server.get_rfc, 9110)
     # Named the way this surface is called, not the way the CLI is typed.
-    assert "list_sections(9110)" in refused["error"]
-    assert "full=true" in refused["error"]
-    assert "--full" not in refused["error"]
+    assert "list_sections(9110)" in refused
+    assert "full=true" in refused
+    assert "--full" not in refused
 
     # ...and the documented ways through it work.
-    assert "error" not in server.get_rfc(9110, full=True)
-    assert "error" not in server.get_rfc(9110, max_lines=10)
+    server.get_rfc(9110, full=True)
+    server.get_rfc(9110, max_lines=10)
 
 
 def test_scoping_the_whole_long_rfc_is_refused_too(isolated_mirror, monkeypatch):
@@ -210,8 +215,8 @@ def test_scoping_the_whole_long_rfc_is_refused_too(isolated_mirror, monkeypatch)
     body = "\n".join(f"line {n}" for n in range(rfc.WHOLE_DOCUMENT_LINE_LIMIT + 100))
     (isolated_mirror / "rfc9110.txt").write_text(body, encoding="utf-8")
     monkeypatch.setattr(rfc, "_fetch", offline)
-    assert "full=true" in server.get_rfc(9110, start_line=1)["error"]
-    assert "full=true" in server.get_rfc(9110, max_lines=10**9)["error"]
+    assert "full=true" in refusal(server.get_rfc, 9110, start_line=1)
+    assert "full=true" in refusal(server.get_rfc, 9110, max_lines=10**9)
 
 
 @pytest.mark.parametrize(
@@ -227,19 +232,31 @@ def test_a_line_number_out_of_range_is_an_error_not_an_empty_read(
 ):
     (isolated_mirror / "rfc4242.txt").write_text("1. Intro\nbody\n", encoding="utf-8")
     monkeypatch.setattr(rfc, "_fetch", offline)
-    result = server.get_rfc(4242, **kwargs)
-    assert named in result["error"]
-    assert "--" not in result["error"]
+    refused = refusal(server.get_rfc, 4242, **kwargs)
+    assert named in refused
+    assert "--" not in refused
 
 
 def test_section_and_start_line_together_are_refused(isolated_mirror, monkeypatch):
     (isolated_mirror / "rfc4242.txt").write_text("1. Intro\nbody\n", encoding="utf-8")
     monkeypatch.setattr(rfc, "_fetch", offline)
-    result = server.get_rfc(4242, section="1", start_line=2)
-    assert "error" in result
-    assert "start_line" in result["error"]
-    assert "max_lines" in result["error"]
-    assert "--" not in result["error"], "the model has no command line to type flags on"
+    refused = refusal(server.get_rfc, 4242, section="1", start_line=2)
+    assert "start_line" in refused
+    assert "max_lines" in refused
+    assert "--" not in refused, "the model has no command line to type flags on"
+
+
+def test_a_mirror_that_cannot_be_read_is_named_rather_than_crashing(isolated_mirror, monkeypatch):
+    """Anything but an anticipated failure reaches the model as a bare "Error
+    executing tool", and a full or unreadable disk is anticipated."""
+
+    def unreadable(*args, **kwargs):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(rfc, "read_document", unreadable)
+    refused = refusal(server.get_rfc, 4242, section="1")
+    assert str(isolated_mirror) in refused
+    assert "Permission denied" in refused
 
 
 # --------------------------------------------------------------------------
@@ -297,8 +314,8 @@ def test_a_number_that_is_not_an_rfc_number_never_reaches_the_network(bad, monke
     """These used to become rfc0.txt and rfc-5.txt and come back as a 404 that
     reads like the RFC simply does not exist."""
     monkeypatch.setattr(rfc, "_fetch", _must_not_fetch)
-    assert "not an RFC number" in server.get_rfc(bad)["error"]
-    assert "not an RFC number" in server.list_sections(bad)["error"]
+    assert "not an RFC number" in refusal(server.get_rfc, bad)
+    assert "not an RFC number" in refusal(server.list_sections, bad)
 
 
 def test_the_model_may_spell_the_number_the_way_it_has_it(sectioned):
@@ -309,19 +326,19 @@ def test_the_model_may_spell_the_number_the_way_it_has_it(sectioned):
 
 def test_a_limit_below_one_is_refused(sectioned):
     """The model picks this number, so -1 and 0 arrive from outside."""
-    assert "at least 1" in server.search_rfcs("hypertext", limit=0)["error"]
-    assert "at least 1" in server.search_rfcs("hypertext", limit=-1)["error"]
+    assert "at least 1" in refusal(server.search_rfcs, "hypertext", limit=0)
+    assert "at least 1" in refusal(server.search_rfcs, "hypertext", limit=-1)
 
 
 def test_a_limit_past_the_ceiling_is_refused(sectioned):
     """The same number, from the same place, in the other direction."""
     ceiling = rfc.MAX_SEARCH_LIMIT
-    assert "error" not in server.search_rfcs("hypertext", limit=ceiling)
-    assert f"at most {ceiling}" in server.search_rfcs("hypertext", limit=ceiling + 1)["error"]
+    server.search_rfcs("hypertext", limit=ceiling)
+    assert f"at most {ceiling}" in refusal(server.search_rfcs, "hypertext", limit=ceiling + 1)
 
 
 def test_an_empty_query_is_refused(sectioned):
-    assert "query is empty" in server.search_rfcs("")["error"]
+    assert "query is empty" in refusal(server.search_rfcs, "")
 
 
 def test_regex_reaches_the_model_too(sectioned):

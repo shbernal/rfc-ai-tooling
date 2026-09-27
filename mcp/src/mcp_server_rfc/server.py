@@ -13,6 +13,7 @@ import os
 import sys
 
 from mcp.server import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
 from . import rfc
@@ -77,8 +78,19 @@ def _mirror():
     return rfc.resolve_mirror()
 
 
-def _fail(message: str) -> dict:
-    return {"error": message}
+def _refuse(exc: rfc.RFCError | OSError) -> ToolError:
+    """A failure the model should read, marked as a failure on the wire.
+
+    Returned as a field in a normal result, a refusal reached every client as a
+    successful call. ToolError is the SDK's anticipated failure: is_error set,
+    the message in the content, and no traceback in the log. An OSError is the
+    mirror — unreadable, full, not writable — and is anticipated in the same
+    sense; left alone, it would reach the model as a bare "Error executing
+    tool" and the operator as a traceback that says less than this does.
+    """
+    if isinstance(exc, OSError):
+        return ToolError(f"the RFC mirror at {_mirror()} could not be used: {exc}")
+    return ToolError(str(exc))
 
 
 def _read_hints(number: int) -> rfc.ReadHints:
@@ -127,8 +139,8 @@ def search_rfcs(query: str, scope: str = "title", limit: int = 20, regex: bool =
                 retry_hint="Retry with scope='title'", remote=_over_http
             ),
         )
-    except rfc.RFCError as exc:
-        return _fail(str(exc))
+    except (rfc.RFCError, OSError) as exc:
+        raise _refuse(exc) from exc
 
 
 @server.tool(
@@ -146,8 +158,8 @@ def search_rfcs(query: str, scope: str = "title", limit: int = 20, regex: bool =
 def list_sections(number: int | str) -> dict:
     try:
         return rfc.sections_payload(_mirror(), rfc.parse_number(number))
-    except rfc.RFCError as exc:
-        return _fail(str(exc))
+    except (rfc.RFCError, OSError) as exc:
+        raise _refuse(exc) from exc
 
 
 @server.tool(
@@ -189,8 +201,8 @@ def get_rfc(
             full=full,
             hints=_read_hints(number),
         )
-    except rfc.RFCError as exc:
-        return _fail(str(exc))
+    except (rfc.RFCError, OSError) as exc:
+        raise _refuse(exc) from exc
 
 
 TRANSPORTS = ("stdio", "http")

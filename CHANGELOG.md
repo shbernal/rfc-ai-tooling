@@ -36,8 +36,20 @@ code announces that something used to work differently.
   with a message naming the argument, and `start_line` and `end_line` always
   bracket the lines returned.
 
+- **MCP tool refusals are protocol errors.** Every refusal — the unscoped-read
+  guard, full-text search without a mirror, a number that is not an RFC number
+  — came back as a successful result carrying an `error` field, so a client
+  that renders, retries or counts failures could not tell one from an answer.
+  They are now raised as the SDK's `ToolError`: `isError` is true and the same
+  message is in `content`. There is no `error` field in the result any more;
+  read `isError`. The CLI is unaffected.
+
 ### Fixed
 
+- **A mirror the server cannot read or write is named in the error.** An
+  `OSError` out of the mirror — unreadable, full, not writable — reached the
+  model as a bare `Error executing tool get_rfc` and the operator as a
+  traceback. It is now a tool error naming the mirror's path and the cause.
 - **A full-text search that runs longer than 60 seconds is an error** naming
   the backend, instead of holding the caller for as long as a slow disk, a
   network filesystem or a pathological `--regex` pattern takes.

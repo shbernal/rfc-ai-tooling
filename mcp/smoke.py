@@ -254,6 +254,20 @@ def main() -> int:
         content = called.get("content") or []
         text = next((c.get("text", "") for c in content if c.get("type") == "text"), "")
         passed &= check("get_rfc returned content", bool(text), "empty content block")
+
+        # A refusal has to reach the client as a failure. It used to come back
+        # as a successful result with an "error" field, which a client that
+        # counts, retries or renders failures could not tell from an answer.
+        # The document is already cached from the call above, so this is cheap.
+        refused = client.request(
+            4, "tools/call", {"name": "get_rfc", "arguments": {"number": OBSOLETE_RFC}}
+        )
+        refused_text = json.dumps(refused.get("content") or [])
+        passed &= check(
+            f"an unscoped get_rfc {OBSOLETE_RFC} is refused with isError",
+            refused.get("isError") is True and "list_sections" in refused_text,
+            json.dumps(refused)[:400],
+        )
     finally:
         client.close()
 
