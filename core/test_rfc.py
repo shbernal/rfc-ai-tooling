@@ -913,11 +913,72 @@ def test_a_malformed_line_range_names_the_form_it_wants(long_document, capsys):
 
 
 def test_an_open_ended_range_reads_to_the_end(long_document, capsys):
-    assert rfc.main(["get", "9110", "--lines", "10:"]) == 0
+    assert rfc.main(["get", "9110", "--lines", "600:"]) == 0
     body = capsys.readouterr().out.splitlines()
-    assert "line 9" in body, "line 10 of the file"
-    assert "line 8" not in body
+    assert "line 599" in body, "line 600 of the file"
+    assert "line 598" not in body
     assert "line 1999" in body
+
+
+# --------------------------------------------------------------------------
+# Line numbers from outside
+# --------------------------------------------------------------------------
+#
+# The MCP surface passes start_line and max_lines through as the model wrote
+# them. Out of range they used to come back as an empty read, or as a payload
+# whose start_line and end_line described lines the content was not taken from.
+
+READ_HINTS = rfc.ReadHints("list_sections(9110)", "full=true", "section", "start_line", "max_lines")
+
+
+def _read(mirror, **kwargs):
+    return rfc.read_payload(mirror, 9110, hints=READ_HINTS, **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"max_lines": 0}, "max_lines must be at least 1"),
+        ({"max_lines": -5}, "max_lines must be at least 1"),
+        ({"start": 0}, "start_line must be at least 1"),
+        ({"start": -50}, "start_line must be at least 1"),
+        ({"start": 10**9}, "past the end"),
+        ({"start": 20, "end": 10}, "before it starts"),
+    ],
+)
+def test_a_line_number_out_of_range_is_refused(long_document, kwargs, message):
+    with pytest.raises(rfc.RFCError, match=message):
+        _read(long_document.parent, **kwargs)
+
+
+def test_the_reported_range_is_the_range_returned(long_document):
+    payload = _read(long_document.parent, start=1990, end=5000)
+    content = payload["content"].splitlines()
+    assert (payload["start_line"], payload["end_line"]) == (1990, payload["total_lines"])
+    assert len(content) == payload["end_line"] - payload["start_line"] + 1
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"start": 1}, {"max_lines": 10**9}, {"start": 1, "max_lines": 10**9}, {"start": 2}],
+    ids=["from-line-one", "huge-cap", "both", "from-line-two"],
+)
+def test_a_range_spanning_the_document_is_guarded_like_the_document(long_document, kwargs):
+    """Scoping's spelling on the whole document used to switch the guard off.
+    A model refused on get_rfc(9110) could reach the same text with start_line=1."""
+    with pytest.raises(rfc.RFCError, match="full=true"):
+        _read(long_document.parent, **kwargs)
+    assert _read(long_document.parent, full=True, **kwargs)["content"]
+
+
+def test_a_range_under_the_limit_on_a_long_document_is_read(long_document):
+    payload = _read(long_document.parent, start=1, max_lines=rfc.WHOLE_DOCUMENT_LINE_LIMIT)
+    assert payload["end_line"] == rfc.WHOLE_DOCUMENT_LINE_LIMIT
+
+
+def test_an_open_ended_range_on_a_short_document_is_read(tmp_path):
+    (tmp_path / "rfc9110.txt").write_text("a\nb\nc\n", encoding="utf-8")
+    assert _read(tmp_path, start=2)["content"] == "b\nc"
 
 
 # --------------------------------------------------------------------------

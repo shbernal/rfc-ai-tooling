@@ -37,10 +37,11 @@ has, which the payload names in `tool`. Title results put current RFCs before
 superseded ones, so a page cut short at `limit` keeps the document you want
 rather than the one it replaced.
 
-`get_rfc` refuses an unscoped read of an RFC over 1500 lines, answering with its
-size and a pointer to `list_sections` rather than filling the context with a
-specification the model had one question about. `full=true` overrides it. A
-section you asked for by name is never refused: `list_sections` reports how long
+`get_rfc` refuses any read of more than 1500 lines that is not a named section,
+answering with its size and a pointer to `list_sections` rather than filling the
+context with a specification the model had one question about; a `start_line` of
+1 does not get around it. `full=true` overrides it. A section you asked for by
+name is never refused: `list_sections` reports how long
 each one is, and `max_lines` caps any read, so the choice is informed rather
 than blocked.
 

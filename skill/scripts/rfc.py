@@ -674,11 +674,11 @@ def section_range(sections: list[dict], wanted: str, total_lines: int) -> tuple[
 def check_whole_document(
     number: int, total_lines: int, *, list_hint: str, override_hint: str
 ) -> None:
-    """Refuse an unscoped read of a long RFC, naming the way to scope it.
+    """Refuse a read of a whole long RFC, naming the way to scope it.
 
-    Only for reads with no section and no line range. Anything explicitly
-    scoped is the caller saying what they want, and a large section they asked
-    for by name is not the failure mode this exists to catch.
+    A large section asked for by name is not the failure mode this exists to
+    catch, so read_payload never calls this for one. A line range that covers
+    the document is, however it was spelled.
     """
     if total_lines <= WHOLE_DOCUMENT_LINE_LIMIT:
         return
@@ -1077,7 +1077,22 @@ def read_payload(
     resolved in one of the two directions silently.
     """
     lines = split_lines(read_document(mirror, number))
+    total = len(lines)
     scoped = start is not None or end is not None
+
+    # These arrive from a model as often as from a person. Out of range, they
+    # used to come back as an empty read or a payload describing lines the
+    # content did not come from, which reads as an RFC with nothing there.
+    if max_lines is not None and max_lines < 1:
+        raise RFCError(f"{hints.cap_flag} must be at least 1, got {max_lines}")
+    if start is not None and start < 1:
+        raise RFCError(f"{hints.range_flag} must be at least 1, got {start}")
+    if start is not None and start > total:
+        raise RFCError(
+            f"RFC {number} has {total} lines; {hints.range_flag} {start} is past the end"
+        )
+    if end is not None and start is not None and end < start:
+        raise RFCError(f"the range ends at line {end}, before it starts at {start}")
 
     mask = None
     section_info = None
@@ -1089,30 +1104,37 @@ def read_payload(
                 "comes back."
             )
         mask = furniture_mask(lines)
-        first, last, section_info = section_range(find_sections(lines, mask), section, len(lines))
-    elif scoped:
-        first = 1 if start is None else start
-        last = len(lines) if end is None else end
+        first, last, section_info = section_range(find_sections(lines, mask), section, total)
     else:
-        if not (full or max_lines):
-            check_whole_document(
-                number,
-                len(lines),
-                list_hint=hints.list_hint,
-                override_hint=hints.override_hint,
-            )
-        first, last = 1, len(lines)
+        first = 1 if start is None else start
+        last = total if end is None else min(end, total)
 
-    if max_lines:
+    if max_lines is not None:
         last = min(last, first + max_lines - 1)
+
+    # On the range that was resolved, not on whether one was supplied: a range
+    # starting at line 1, or a cap larger than the document, is the whole
+    # document with scoping's spelling, and used to walk straight past this.
+    span = last - first + 1
+    if not (section or full) and span > WHOLE_DOCUMENT_LINE_LIMIT:
+        if (first, last) == (1, total):
+            check_whole_document(
+                number, total, list_hint=hints.list_hint, override_hint=hints.override_hint
+            )
+        raise RFCError(
+            f"That is {span} lines of RFC {number}, past the {WHOLE_DOCUMENT_LINE_LIMIT} "
+            f"a read returns at once. Run `{hints.list_hint}` to find the section that "
+            f"answers your question, or narrow the range with {hints.cap_flag}. "
+            f"{hints.override_hint} lifts the limit if you genuinely need all of it."
+        )
 
     return {
         "number": number,
         "header": header_for(mirror, number),
         "section": section_info,
         "start_line": first,
-        "end_line": min(last, len(lines)),
-        "total_lines": len(lines),
+        "end_line": last,
+        "total_lines": total,
         "content": slice_lines(lines, first, last, raw, mask),
     }
 
@@ -1435,7 +1457,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_get.add_argument(
         "--full",
         action="store_true",
-        help=f"read the whole document even past {WHOLE_DOCUMENT_LINE_LIMIT} lines",
+        help=f"read more than {WHOLE_DOCUMENT_LINE_LIMIT} lines at once, up to the whole document",
     )
     p_get.add_argument("--raw", action="store_true", help="keep page headers and footers")
     add_read_flags(p_get)

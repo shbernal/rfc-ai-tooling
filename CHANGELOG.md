@@ -21,6 +21,20 @@ code announces that something used to work differently.
   rows, narrow the query.
 - **An empty query is refused.** A query with no terms matched every title,
   so `search ""` returned the index rather than a search result.
+- **The 1500-line guard applies to the lines a read returns, not to how it was
+  asked for.** It used to run only on a read with no section and no range, so
+  `start_line=1` or a `max_lines` larger than the document read the whole
+  thing while looking like scoping — the same text `get_rfc(9110)` had just
+  refused. Any read of more than 1500 lines that is not a named section is now
+  refused, a `--lines 10:` on a long RFC included; narrow the range, cap it with
+  `--max-lines` / `max_lines`, or pass `--full` / `full=true` to lift the limit.
+  A named section is still never refused for its length.
+- **Out-of-range line numbers are errors.** `max_lines` below 1, `start_line`
+  below 1 or past the end of the document, and a `--lines` range that ends
+  before it starts each came back as an empty read or as a payload whose
+  `start_line` and `end_line` did not describe the content. They are refused
+  with a message naming the argument, and `start_line` and `end_line` always
+  bracket the lines returned.
 
 ### Fixed
 

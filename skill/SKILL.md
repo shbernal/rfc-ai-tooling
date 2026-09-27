@@ -140,11 +140,11 @@ before you pay it. Most are a few hundred lines; a few — RFC 2616's section 13
 among them — run past a thousand, and `--max-lines N` caps any read when the
 first part of one is enough.
 
-`get` without a section or a line range refuses documents over 1500 lines and
-tells you how long they are; run `sections` and pick one. A section you named is
-never refused for its length, however long it is. `--full` overrides the
-whole-document guard when the entire text really is the goal, which is rarer
-than it sounds.
+`get` refuses a read of more than 1500 lines that is not a named section — a
+whole document, or a `--lines` range that long — and tells you how long it is;
+run `sections` and pick one. A section you named is never refused for its
+length, however long it is. `--full` lifts the limit when the entire text really
+is the goal, which is rarer than it sounds.
 
 Some older RFCs — RFC 768 and RFC 1060 among them — have no numbered headings at
 all. `sections` says so instead of inventing any, and a line range is the

@@ -205,6 +205,33 @@ def test_a_long_rfc_with_no_section_is_refused(isolated_mirror, monkeypatch):
     assert "error" not in server.get_rfc(9110, max_lines=10)
 
 
+def test_scoping_the_whole_long_rfc_is_refused_too(isolated_mirror, monkeypatch):
+    """The guard's two leaks, closed where the model would use them."""
+    body = "\n".join(f"line {n}" for n in range(rfc.WHOLE_DOCUMENT_LINE_LIMIT + 100))
+    (isolated_mirror / "rfc9110.txt").write_text(body, encoding="utf-8")
+    monkeypatch.setattr(rfc, "_fetch", offline)
+    assert "full=true" in server.get_rfc(9110, start_line=1)["error"]
+    assert "full=true" in server.get_rfc(9110, max_lines=10**9)["error"]
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "named"),
+    [
+        ({"max_lines": -5}, "max_lines"),
+        ({"start_line": -50}, "start_line"),
+        ({"start_line": 10**9}, "past the end"),
+    ],
+)
+def test_a_line_number_out_of_range_is_an_error_not_an_empty_read(
+    isolated_mirror, monkeypatch, kwargs, named
+):
+    (isolated_mirror / "rfc4242.txt").write_text("1. Intro\nbody\n", encoding="utf-8")
+    monkeypatch.setattr(rfc, "_fetch", offline)
+    result = server.get_rfc(4242, **kwargs)
+    assert named in result["error"]
+    assert "--" not in result["error"]
+
+
 def test_section_and_start_line_together_are_refused(isolated_mirror, monkeypatch):
     (isolated_mirror / "rfc4242.txt").write_text("1. Intro\nbody\n", encoding="utf-8")
     monkeypatch.setattr(rfc, "_fetch", offline)

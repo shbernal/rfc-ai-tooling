@@ -145,8 +145,9 @@ only the 2 MB index the server fetches on demand.
 - **List sections** of an RFC with line numbers, so the agent can read the one
   section it needs instead of pulling a 500 KB document into context.
 - **Fetch** a section, or a line range, with page headers and footers stripped.
-  An unscoped read of a long RFC is refused rather than dumped, naming the
-  document's size and the way to scope it; both surfaces take an override.
+  A read of more than 1500 lines that is not a named section is refused rather
+  than dumped, naming its size and the way to scope it; both surfaces take an
+  override.
 - **Flag obsolescence on every result.** An RFC that has been superseded says so
   in a header the model cannot miss:
 
