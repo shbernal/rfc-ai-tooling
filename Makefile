@@ -11,7 +11,7 @@ VERSION := $(shell grep -m1 '^version = ' mcp/pyproject.toml | cut -d'"' -f2)
 # use an environment you manage yourself: `make test RUN=` in an active venv.
 RUN ?= uv run
 
-.PHONY: sync-core check-vendor test lint typecheck format smoke smoke-local print-version
+.PHONY: sync-core check-vendor test coverage lint typecheck format smoke smoke-local print-version
 
 # For the container recipe in AGENTS.md, which needs the version on a command
 # line built outside this Makefile.
@@ -41,6 +41,12 @@ check-vendor:
 
 test:
 	$(RUN) pytest
+
+# A number to look at, not a gate: neither `test` nor CI runs this. The vendored
+# copy under mcp/src reports low because rfc.py is imported under two names;
+# core/rfc.py is the row that counts.
+coverage:
+	$(RUN) pytest --cov=core --cov=mcp/src/mcp_server_rfc --cov-report=term-missing
 
 # The same JSON-RPC session against two different things, and the difference is
 # the point.

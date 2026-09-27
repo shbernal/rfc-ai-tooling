@@ -40,6 +40,10 @@ markers = [
 ]
 addopts = "-m 'not network'"
 
+[tool.coverage.report]
+# Run as a script, not by anything a test can call in-process.
+exclude_also = ['if __name__ == "__main__":']
+
 [dependency-groups]
 dev = [
     "pytest>=9.1",
@@ -49,4 +53,5 @@ dev = [
     # instead of failing. Installing the real SDK keeps that name honest.
     "mcp>=2.2.0",
     "mypy>=2.3.1",
+    "pytest-cov>=7.1.0",
 ]

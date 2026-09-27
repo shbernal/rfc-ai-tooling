@@ -1010,6 +1010,78 @@ def test_an_open_ended_range_on_a_short_document_is_read(tmp_path):
 
 
 # --------------------------------------------------------------------------
+# Human output
+# --------------------------------------------------------------------------
+#
+# The payload builders are covered on both surfaces; what a person reads off
+# the CLI is rendered separately from them, and a change made for the payloads
+# lands here with nothing else to object.
+
+
+@pytest.fixture
+def indexed(tmp_path, monkeypatch, records) -> Path:
+    monkeypatch.setenv("RFC_MIRROR", str(tmp_path))
+    monkeypatch.setattr(rfc, "load_index", lambda *a, **k: records)
+    return tmp_path
+
+
+def test_meta_renders_the_whole_record(indexed, capsys):
+    assert rfc.main(["meta", "9110"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0].startswith("RFC 9110")
+    assert out[1].startswith("Authors: R. Fielding")
+    assert "Date: June 2022" in out
+    assert any(line.startswith("Obsoletes: RFC 2818, 7230") for line in out)
+    assert "Updates: RFC 3864" in out
+    assert "Also: STD97" in out
+    assert any(line.startswith("DOI: 10.17487/RFC9110") for line in out)
+
+
+def test_meta_for_an_rfc_missing_from_the_index_points_at_get(indexed, capsys):
+    """An RFC published since the last refresh is not in the index yet, and
+    retrieval does not depend on the index."""
+    assert rfc.main(["meta", "99999"]) == 1
+    assert "get 99999" in capsys.readouterr().err
+
+
+def test_sections_render_indented_with_their_lengths(indexed, capsys):
+    (indexed / "rfc4242.txt").write_text(
+        (FIXTURES / "modern.txt").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    assert rfc.main(["sections", "4242"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0] == "RFC 4242"
+    assert out[1].startswith("1  Introduction  (line ")
+    assert out[2].startswith("  1.1  Purpose  (line ")
+    assert all(line.endswith(" lines)") for line in out[1:])
+
+
+def test_sections_of_an_unsectioned_rfc_explain_the_line_range(indexed, capsys):
+    """The one case where an empty list needs a sentence: the reader has to be
+    told that --lines is how to read this document."""
+    (indexed / "rfc4242.txt").write_text("Some prose.\n\n   Not a heading.\n", encoding="utf-8")
+    assert rfc.main(["sections", "4242"]) == 0
+    out = capsys.readouterr().out
+    assert "no numbered headings" in out
+    assert "get --lines A:B" in out
+
+
+def test_fulltext_results_quote_their_matching_lines():
+    payload = {
+        "scope": "fulltext",
+        "count": 2,
+        "total": 2,
+        "results": [
+            {"header": "RFC 1000", "matches": [{"line": 2, "text": "widget widget"}]},
+            {"header": "RFC 2000", "matches": [{"line": 1, "text": "a widget"}]},
+        ],
+    }
+    assert rfc._search_human(payload) == (
+        "RFC 1000\n   2: widget widget\n\nRFC 2000\n   1: a widget"
+    )
+
+
+# --------------------------------------------------------------------------
 # Number parsing
 # --------------------------------------------------------------------------
 

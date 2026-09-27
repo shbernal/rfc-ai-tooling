@@ -418,3 +418,63 @@ def test_an_unknown_log_level_is_ignored_with_a_warning(monkeypatch, caplog):
     with caplog.at_level(logging.WARNING, logger="mcp-server-rfc"):
         importlib.reload(server)
     assert "RFC_LOG_LEVEL='verbose'" in caplog.text
+
+
+# --------------------------------------------------------------------------
+# The entry point
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+def launched(monkeypatch):
+    """Run main() with a recorder where the transport would start."""
+    for name in ("RFC_TRANSPORT", "HOST", "PORT"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(server, "_over_http", False)
+    calls = []
+    monkeypatch.setattr(server.server, "run", lambda *a, **kw: calls.append((a, kw)))
+
+    def launch(*argv):
+        monkeypatch.setattr(server.sys, "argv", ["mcp-server-rfc", *argv])
+        server.main()
+        return calls
+
+    return launch
+
+
+def test_stdio_is_the_default(launched):
+    assert launched() == [(("stdio",), {})]
+    assert server._over_http is False
+
+
+def test_http_serves_statelessly_where_it_was_told(launched):
+    calls = launched("--transport", "http", "--host", "0.0.0.0", "--port", "9000")
+    assert calls == [
+        (("streamable-http",), {"host": "0.0.0.0", "port": 9000, "stateless_http": True})
+    ]
+    assert server._over_http is True, "the no-mirror refusal has to know it is remote"
+
+
+def test_http_is_configured_from_the_environment(launched, monkeypatch):
+    """The platforms this mode is for set configuration that way."""
+    monkeypatch.setenv("RFC_TRANSPORT", "http")
+    monkeypatch.setenv("HOST", "0.0.0.0")
+    monkeypatch.setenv("PORT", "8080")
+    ((_, kwargs),) = launched()
+    assert (kwargs["host"], kwargs["port"]) == ("0.0.0.0", 8080)
+
+
+def test_a_flag_overrides_the_environment(launched, monkeypatch):
+    monkeypatch.setenv("RFC_TRANSPORT", "http")
+    assert launched("--transport", "stdio") == [(("stdio",), {})]
+
+
+def test_a_subcommand_runs_the_cli_instead_of_the_server(launched, monkeypatch):
+    """Every refusal the server hands the model names `uvx mcp-server-rfc sync`,
+    so that has to sync rather than start a server that ignores the word."""
+    ran = []
+    monkeypatch.setattr(rfc, "main", lambda argv: ran.append(argv) or 0)
+    with pytest.raises(SystemExit) as raised:
+        launched("sync", "--dry-run")
+    assert raised.value.code == 0
+    assert ran == [["sync", "--dry-run"]]

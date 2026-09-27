@@ -29,6 +29,7 @@ independent code.
 ```bash
 make sync-core     # copy core/rfc.py into both surfaces — run after any core edit
 make test          # pytest, no network (network-marked tests are excluded)
+make coverage      # the same suite with a per-line coverage report; not a gate
 make lint          # ruff check + format --check
 make typecheck     # mypy over core/rfc.py, server.py and smoke.py
 make format        # ruff format .
