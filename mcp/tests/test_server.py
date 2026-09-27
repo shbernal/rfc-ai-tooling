@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -329,3 +330,53 @@ def test_smoke_resolves_the_mirror_the_way_the_server_does(environment, monkeypa
     for name, value in environment.items():
         monkeypatch.setenv(name, value)
     assert _load_smoke().mirror_path() == rfc.resolve_mirror()
+
+
+# --------------------------------------------------------------------------
+# Configuration from the environment
+# --------------------------------------------------------------------------
+#
+# argparse validates what is typed, not a default, and the environment arrives
+# as defaults — so none of these were checked before.
+
+
+@pytest.mark.parametrize("value", ["sse", "STDIO", "stdio ", "htpp"])
+def test_an_unknown_transport_is_refused_rather_than_served_over_http(value, monkeypatch, capsys):
+    """Anything that was not exactly `stdio` used to start a listener, and the
+    image sets HOST=0.0.0.0, so a typo bound an unauthenticated server to every
+    interface."""
+    monkeypatch.setenv("RFC_TRANSPORT", value)
+    monkeypatch.setattr(server.server, "run", _must_not_fetch)
+    monkeypatch.setattr(server.sys, "argv", ["mcp-server-rfc"])
+    with pytest.raises(SystemExit) as raised:
+        server.main()
+    assert raised.value.code == 2
+    assert "RFC_TRANSPORT" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("value", ["stdio", "http"])
+def test_a_valid_transport_from_the_environment_is_used(value, monkeypatch):
+    monkeypatch.setenv("RFC_TRANSPORT", value)
+    assert server.build_parser().parse_args([]).transport == value
+
+
+def test_a_port_that_is_not_a_number_names_the_variable(monkeypatch, capsys):
+    monkeypatch.setenv("PORT", "http")
+    with pytest.raises(SystemExit) as raised:
+        server.build_parser()
+    assert raised.value.code == 2
+    assert "PORT='http'" in capsys.readouterr().err
+
+
+def test_a_port_from_the_environment_is_an_int(monkeypatch):
+    monkeypatch.setenv("PORT", "8080")
+    assert server.build_parser().parse_args([]).port == 8080
+
+
+def test_an_unknown_log_level_is_ignored_with_a_warning(monkeypatch, caplog):
+    """This runs at import, before the process can answer anything, so raising
+    here is a server that spawns and dies with only a traceback to show for it."""
+    monkeypatch.setenv("RFC_LOG_LEVEL", "verbose")
+    with caplog.at_level(logging.WARNING, logger="mcp-server-rfc"):
+        importlib.reload(server)
+    assert "RFC_LOG_LEVEL='verbose'" in caplog.text

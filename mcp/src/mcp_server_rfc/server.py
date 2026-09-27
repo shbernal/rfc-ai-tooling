@@ -21,14 +21,22 @@ from . import rfc
 # protocol channel, and a document fetcher that logs what it returns writes the
 # corpus to disk a second time — the implementation this replaces had
 # accumulated 3.8 MB of log against 1.1 MB of retrieved RFCs.
+#
+# An unknown level falls back to INFO rather than raising: this runs at import,
+# before the process can speak the protocol, and a wrong log level is not a
+# reason to refuse to serve.
+_requested_level = os.environ.get("RFC_LOG_LEVEL", "INFO")
+_level = logging.getLevelName(_requested_level.strip().upper())
 logging.basicConfig(
-    level=os.environ.get("RFC_LOG_LEVEL", "INFO").upper(),
+    level=_level if isinstance(_level, int) else logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     handlers=[logging.FileHandler(os.environ["RFC_LOG_FILE"])]
     if os.environ.get("RFC_LOG_FILE")
     else [logging.StreamHandler(sys.stderr)],
 )
 logger = logging.getLogger("mcp-server-rfc")
+if not isinstance(_level, int):
+    logger.warning("RFC_LOG_LEVEL=%r is not a log level; using INFO", _requested_level)
 
 # The spelling of this CLI that the reader can actually type. `uvx
 # mcp-server-rfc` is the documented install and the one a client spawns, and it
@@ -183,12 +191,20 @@ def get_rfc(
         return _fail(str(exc))
 
 
+TRANSPORTS = ("stdio", "http")
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Flags for the HTTP mode only; stdio needs none and stays the default.
 
     Every flag also reads an environment variable, because the deployment
     targets that would use HTTP set configuration that way and not by editing a
     command line. `PORT` and `HOST` are spelled the way platforms spell them.
+
+    argparse checks `choices` and `type` against what is typed, not against a
+    default, so the environment's values are checked here and a bad one is an
+    error naming the variable. A transport nobody recognised must never be read
+    as a request to listen on a network.
     """
     parser = argparse.ArgumentParser(
         prog=CLI,
@@ -202,7 +218,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {rfc.__version__}")
     parser.add_argument(
         "--transport",
-        choices=("stdio", "http"),
+        choices=TRANSPORTS,
         default=os.environ.get("RFC_TRANSPORT", "stdio"),
         help="stdio (default) for a client that spawns this process; http to serve it",
     )
@@ -214,9 +230,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("PORT", "8000")),
+        default=os.environ.get("PORT", "8000"),
         help="http only; bind port (default: 8000)",
     )
+
+    transport = parser.get_default("transport")
+    if transport not in TRANSPORTS:
+        parser.error(f"RFC_TRANSPORT={transport!r} is not a transport; use stdio or http")
+    port = parser.get_default("port")
+    try:
+        parser.set_defaults(port=int(port))
+    except ValueError:
+        parser.error(f"PORT={port!r} is not a port number")
     return parser
 
 
@@ -232,7 +257,9 @@ def main() -> None:
 
     args = build_parser().parse_args(argv)
 
-    if args.transport == "stdio":
+    # HTTP is the branch that has to be asked for by name; anything else is
+    # stdio, which listens on nothing.
+    if args.transport != "http":
         logger.info("mcp-server-rfc %s starting on stdio", rfc.__version__)
         server.run("stdio")
         return

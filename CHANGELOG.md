@@ -8,6 +8,27 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## Unreleased
+
+### Fixed
+
+All three are in the MCP server's environment configuration; the skill is
+unaffected.
+
+- **An unrecognised `RFC_TRANSPORT` no longer starts an HTTP server.**
+  argparse checks `choices` only against a value typed on the command line,
+  and the environment arrives as a default, so it was never checked — and the
+  server tested for `stdio` and served HTTP for everything else. `sse`,
+  `STDIO`, a trailing space or a typo each opened a listener, and in the image,
+  which sets `HOST=0.0.0.0`, that listener was on every interface with no
+  authentication. Any value other than `stdio` or `http` is now an error naming
+  the variable.
+- **A `PORT` that is not a number is an error naming `PORT`**, not a
+  `ValueError` traceback out of building the argument parser.
+- **An unknown `RFC_LOG_LEVEL` falls back to `INFO`** and logs a warning naming
+  the value, where it used to raise at import and kill the server before it
+  could answer anything.
+
 ## 0.4.0 — 2026-09-05
 
 ### Breaking
