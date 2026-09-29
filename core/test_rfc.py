@@ -224,17 +224,45 @@ def test_a_number_at_column_zero_is_not_a_heading_on_its_own():
 
 def test_the_top_level_has_to_count_up():
     lines = rfc.split_lines(
-        "1. Introduction\n   prose\n2. Terminology\n   prose\n"
-        "17 October 1994 is not section 17\n3. Body\n   prose\n"
+        "1. Introduction\n\n   prose\n\n2. Terminology\n\n   prose\n\n"
+        "17 October 1994 is not section 17\n\n3. Body\n\n   prose\n"
     )
     assert [s["section"] for s in rfc.find_sections(lines)] == ["1", "2", "3"]
 
 
-def test_a_subsection_still_only_has_to_look_like_one():
-    """A dotted number at column 0 is hard to hit by accident, so the plain
-    rule stays there rather than growing a second heuristic."""
-    lines = rfc.split_lines("1. Intro\n   prose\n1.4 Scope\n   prose\n")
-    assert [s["section"] for s in rfc.find_sections(lines)] == ["1", "1.4"]
+def test_a_leading_zero_is_not_a_section_number():
+    """RFC 1700 has "0001 (minimize monetary cost)" at column 0, and it was
+    taken for section 1."""
+    lines = rfc.split_lines("0001 (minimize monetary cost)\n\n1. Introduction\n\n   prose\n")
+    assert [s["section"] for s in rfc.find_sections(lines)] == ["1"]
+
+
+def test_a_subsection_does_not_have_to_prove_its_parent():
+    """RFC 2616 goes from 13 to 13.1.1 with no 13.1 between them."""
+    lines = rfc.split_lines("1. Intro\n\n   prose\n\n1.4.2 Scope\n\n   prose\n")
+    assert [s["section"] for s in rfc.find_sections(lines)] == ["1", "1.4.2"]
+
+
+def test_a_table_of_contents_at_column_zero_does_not_eat_the_sequence():
+    """Contents lines count 1, 2, 3 as well as the headings do. Taken for
+    headings, they listed the contents as the document's sections and left the
+    real "1. Introduction" out of sequence, so it was rejected."""
+    lines = rfc.split_lines(
+        "1 Introduction ........ 2\n2 Terminology ......... 3\n\n"
+        "1 Introduction\n\n   prose\n\n2 Terminology\n\n   prose\n"
+    )
+    assert [(s["section"], s["line"]) for s in rfc.find_sections(lines)] == [("1", 4), ("2", 8)]
+
+
+def test_a_run_of_dotted_numbers_is_a_table():
+    """RFC 1700's multicast registry: every row parses as a section number."""
+    lines = rfc.split_lines(
+        "1. Addresses\n\n"
+        "224.0.0.1  All Systems on this Subnet\n"
+        "224.0.0.2  All Routers on this Subnet\n"
+        "224.0.0.3  Unassigned\n"
+    )
+    assert [s["section"] for s in rfc.find_sections(lines)] == ["1"]
 
 
 def test_documents_without_numbered_headings_yield_no_sections():

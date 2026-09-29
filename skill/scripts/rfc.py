@@ -604,7 +604,7 @@ def find_sections(lines: list[str], mask: list[bool] | None = None) -> list[dict
     """Numbered headings with their 1-based line numbers.
 
     Headings sit at column 0 in every RFC generation; the table of contents is
-    indented, which is what keeps it out of the results.
+    usually indented, and where it is not, its lines have neighbours.
 
     The mask can be passed in by a caller that needs one anyway; building it
     walks the whole document with three regexes per line, and a section read
@@ -612,24 +612,36 @@ def find_sections(lines: list[str], mask: list[bool] | None = None) -> list[dict
     """
     if mask is None:
         mask = furniture_mask(lines)
+    matches = [
+        None if masked else _HEADING.match(line) for line, masked in zip(lines, mask, strict=True)
+    ]
+    depths = [match.group(1).count(".") + 1 if match else 0 for match in matches]
     sections: list[dict] = []
     expected_top = 1
-    for i, line in enumerate(lines):
-        if mask[i]:
-            continue
-        match = _HEADING.match(line)
+    for i, match in enumerate(matches):
         if not match:
             continue
         number = match.group(1)
+        depth = depths[i]
+        # A heading stands alone; a numbered line with a neighbour of the same
+        # shape is a row. That is what a table of contents at column 0 looks
+        # like, and a registry table of dotted addresses or OIDs — and the
+        # contents are the costlier of the two, because their 1, 2, 3 use up
+        # the sequence below and the real headings are then rejected for not
+        # continuing it.
+        if (i > 0 and depths[i - 1] == depth) or (i + 1 < len(depths) and depths[i + 1] == depth):
+            continue
         # A bare number at column 0 is not enough. Pre-1990 RFCs put tables
         # there — the assigned-numbers family especially — and every row of one
         # parsed as a heading, so `sections` answered with a list of table rows
         # and `get --section` resolved to a row of data. Requiring the top level
         # to count 1, 2, 3 rejects "1996 was a good year" without rejecting a
-        # real "2. Terminology". Deeper numbers keep the plain rule; a dotted
-        # number at column 0 is hard to hit by accident.
+        # real "2. Terminology". Deeper numbers carry no sequence rule: RFC
+        # 2616 skips 13.1 and goes straight to 13.1.1, so demanding a parent
+        # costs real subsections.
         if "." not in number:
-            if int(number) != expected_top:
+            # A leading zero is a code, not a section: 0001 is a flag value.
+            if number.startswith("0") or int(number) != expected_top:
                 continue
             expected_top += 1
         sections.append(
@@ -637,7 +649,7 @@ def find_sections(lines: list[str], mask: list[bool] | None = None) -> list[dict
                 "section": number,
                 "title": match.group(2).strip(),
                 "line": i + 1,
-                "depth": number.count(".") + 1,
+                "depth": depth,
             }
         )
     # How long each section is, so that a caller choosing one can see what it

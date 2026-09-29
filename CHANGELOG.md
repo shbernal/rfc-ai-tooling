@@ -63,6 +63,15 @@ code announces that something used to work differently.
   `rfc*.txt`, which also matches `rfc-index.txt`, so every search scanned
   several megabytes of index only to drop the row it produced. It globs
   `rfc[0-9]*.txt` now, as the sync already did.
+- **A table of contents at column 0 no longer replaces the sections it
+  lists.** Some RFCs set their contents flush left, and each line was taken
+  for a heading; worse, those lines used up the 1, 2, 3 the real headings had
+  to continue, so `sections` listed the contents and `get --section 1` read a
+  contents line — RFC 5222, 5389, 5735 and 1155 among others. A numbered line with a neighbour at the same depth is now
+  read as a row, which also clears registry tables: RFC 1700 goes from 71
+  false headings to 12.
+- **A number with a leading zero is not a section.** `0001 (minimize monetary
+  cost)` was section 1 of RFC 1700.
 
 The rest are in the MCP server's environment configuration; the skill is
 unaffected.
