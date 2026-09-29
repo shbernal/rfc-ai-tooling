@@ -742,6 +742,24 @@ def test_a_backend_that_is_not_there_raises_the_projects_own_error():
         rfc._run_search(["rfc-tooling-no-such-binary", "widget"])
 
 
+def test_the_count_pass_does_not_read_the_index(mirror, backend, monkeypatch):
+    """`rfc*.txt` also matches rfc-index.txt, megabytes the count pass would
+    read on every search only to drop the row it produced."""
+    rfc.index_path(mirror).write_text("widget\n", encoding="utf-8")
+    seen: list[str] = []
+    real = rfc._run_search
+
+    def spy(cmd):
+        lines = real(cmd)
+        seen.extend(lines)
+        return lines
+
+    monkeypatch.setattr(rfc, "_run_search", spy)
+    rfc.search_fulltext(mirror, "widget", limit=10)
+    assert seen
+    assert not any("rfc-index" in line for line in seen)
+
+
 def test_ripgrep_is_preferred_when_it_is_there(monkeypatch):
     monkeypatch.setattr(rfc.shutil, "which", lambda name: f"/usr/bin/{name}")
     assert rfc._search_tool() == ("rg", True)

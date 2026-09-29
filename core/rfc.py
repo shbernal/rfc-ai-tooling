@@ -839,14 +839,14 @@ def search_fulltext(
             "-e",
             query,
             "--glob",
-            "rfc*.txt",
+            "rfc[0-9]*.txt",
             str(mirror),
         ]
     else:
         count_cmd = [
             "grep",
             f"-rci{'E' if use_regex else 'F'}",
-            "--include=rfc*.txt",
+            "--include=rfc[0-9]*.txt",
             "--",
             query,
             str(mirror),

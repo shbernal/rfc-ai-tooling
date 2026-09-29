@@ -59,6 +59,10 @@ code announces that something used to work differently.
   calls fetching the same RFC — or the index, past its TTL — renamed each
   other's file. The index write surfaced that as an unexplained
   `Error executing tool search_rfcs`. The name is unique per thread now.
+- **Full-text search no longer reads the index.** The count pass globbed
+  `rfc*.txt`, which also matches `rfc-index.txt`, so every search scanned
+  several megabytes of index only to drop the row it produced. It globs
+  `rfc[0-9]*.txt` now, as the sync already did.
 
 The rest are in the MCP server's environment configuration; the skill is
 unaffected.
