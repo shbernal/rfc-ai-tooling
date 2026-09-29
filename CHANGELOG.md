@@ -8,7 +8,7 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
-## Unreleased
+## 0.5.0 — 2026-09-29
 
 ### Breaking
 
@@ -35,7 +35,6 @@ code announces that something used to work differently.
   `start_line` and `end_line` did not describe the content. They are refused
   with a message naming the argument, and `start_line` and `end_line` always
   bracket the lines returned.
-
 - **MCP tool refusals are protocol errors.** Every refusal — the unscoped-read
   guard, full-text search without a mirror, a number that is not an RFC number
   — came back as a successful result carrying an `error` field, so a client
@@ -67,9 +66,9 @@ code announces that something used to work differently.
   lists.** Some RFCs set their contents flush left, and each line was taken
   for a heading; worse, those lines used up the 1, 2, 3 the real headings had
   to continue, so `sections` listed the contents and `get --section 1` read a
-  contents line — RFC 5222, 5389, 5735 and 1155 among others. A numbered line with a neighbour at the same depth is now
-  read as a row, which also clears registry tables: RFC 1700 goes from 71
-  false headings to 12.
+  contents line — RFC 5222, 5389, 5735 and 1155 among others. A numbered line
+  with a neighbour at the same depth is now read as a row, which also clears
+  registry tables: RFC 1700 goes from 71 false headings to 12.
 - **A number with a leading zero is not a section.** `0001 (minimize monetary
   cost)` was section 1 of RFC 1700.
 
