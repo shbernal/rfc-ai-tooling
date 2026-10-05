@@ -100,6 +100,12 @@ released version; fix forward with a version bump on whichever surfaces are
 affected. The publish workflow is idempotent on both halves, so re-running it at
 an already-published version skips rather than fails.
 
+The two halves fire on different events. Pushing a `v*` tag publishes
+`mcp-server-rfc` to PyPI and nothing else; the skill goes to ClawHub only when
+a GitHub release is created for that tag (`gh release create vX.Y.Z
+--verify-tag`). A release is not done until both have run. ClawHub then holds
+the new version for security scans before it becomes public.
+
 ### Breaking changes are welcome
 
 Released constrains what a *published version* means, not what the next one may
