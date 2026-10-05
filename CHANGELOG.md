@@ -8,6 +8,15 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## 0.5.1 — 2026-10-05
+
+### Fixed
+
+- **The skill's ripgrep example finds the mirror.** It searched
+  `"$RFC_MIRROR"`, which is unset unless the user set it, so by default the
+  search ran on an empty path. It now takes the path from `status --json`.
+  No code changes; `mcp-server-rfc` 0.5.1 is the same server as 0.5.0.
+
 ## 0.5.0 — 2026-09-29
 
 ### Breaking
