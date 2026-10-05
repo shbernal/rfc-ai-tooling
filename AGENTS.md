@@ -12,6 +12,7 @@ See `README.md` for the full pitch and usage.
 core/     the stdlib-only implementation and its tests — the only real source
 skill/    SKILL.md and a vendored copy of core/rfc.py
 mcp/      the mcp-server-rfc PyPI package, a thin adapter over the core
+assets/   README images
 ```
 
 ## The vendoring rule

@@ -1,0 +1,80 @@
+{
+  "measured": "2026-10-05",
+  "tool": "core/rfc.py 0.5.0",
+  "method": "UTF-8 bytes on stdout of `rfc.py get N --full` and `rfc.py get N --section X` (default cleaning: page headers and footers removed)",
+  "bytes_per_token": 4,
+  "rfcs": [
+    {
+      "rfc": 9110,
+      "title": "HTTP Semantics",
+      "short_title": "HTTP Semantics",
+      "section": "15.5.5",
+      "section_title": "404 Not Found",
+      "why": "what a status code means",
+      "whole_bytes": 502986,
+      "whole_lines": 10786,
+      "section_bytes": 708,
+      "section_lines": 14
+    },
+    {
+      "rfc": 9000,
+      "title": "QUIC: A UDP-Based Multiplexed and Secure Transport",
+      "short_title": "QUIC",
+      "section": "19.3",
+      "section_title": "ACK Frames",
+      "why": "the layout of one frame type",
+      "whole_bytes": 403524,
+      "whole_lines": 8486,
+      "section_bytes": 6969,
+      "section_lines": 169
+    },
+    {
+      "rfc": 8446,
+      "title": "The Transport Layer Security (TLS) Protocol Version 1.3",
+      "short_title": "TLS 1.3",
+      "section": "4.1.2",
+      "section_title": "Client Hello",
+      "why": "one handshake message",
+      "whole_bytes": 312585,
+      "whole_lines": 8964,
+      "section_bytes": 7461,
+      "section_lines": 202
+    },
+    {
+      "rfc": 5321,
+      "title": "Simple Mail Transfer Protocol",
+      "short_title": "SMTP",
+      "section": "4.2",
+      "section_title": "SMTP Replies",
+      "why": "the reply codes a server sends",
+      "whole_bytes": 211347,
+      "whole_lines": 5324,
+      "section_bytes": 16012,
+      "section_lines": 443
+    },
+    {
+      "rfc": 6749,
+      "title": "The OAuth 2.0 Authorization Framework",
+      "short_title": "OAuth 2.0",
+      "section": "5.2",
+      "section_title": "Error Response",
+      "why": "the token endpoint's error format",
+      "whole_bytes": 151798,
+      "whole_lines": 4260,
+      "section_bytes": 3740,
+      "section_lines": 112
+    },
+    {
+      "rfc": 9111,
+      "title": "HTTP Caching",
+      "short_title": "HTTP Caching",
+      "section": "4.2",
+      "section_title": "Freshness",
+      "why": "how freshness is decided",
+      "whole_bytes": 84520,
+      "whole_lines": 1957,
+      "section_bytes": 10125,
+      "section_lines": 220
+    }
+  ]
+}
