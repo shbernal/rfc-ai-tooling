@@ -94,7 +94,7 @@ jobs:
       - uses: actions/setup-node@v7
         if: steps.diff.outputs.changed == 'true'
         with:
-          node-version: "22"
+          node-version: "24"
 
       # Pinned; clawhub has no OIDC trusted-publishing path, so auth is a
       # long-lived token (CLAWHUB_TOKEN) rather than id-token: write.
