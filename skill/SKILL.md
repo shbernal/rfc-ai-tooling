@@ -166,10 +166,12 @@ With a synced mirror, the documents are plain text files in `$RFC_MIRROR`, or
 under the platform's data directory when that is unset —
 `$XDG_DATA_HOME/rfc-ai-tooling`, falling back to `~/.local/share/rfc-ai-tooling`.
 `status` prints the path in use. For anything the CLI does not cover, use
-ripgrep directly:
+ripgrep directly on that path. `$RFC_MIRROR` is usually unset, so ask `status`
+for the path instead of using the variable:
 
 ```bash
-rg -l 'Retry-After' "$RFC_MIRROR"
+mirror=$(python3 scripts/rfc.py status --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["mirror"])')
+rg -l 'Retry-After' "$mirror"
 ```
 
 ## Full-text mode is opt-in — never sync unprompted
