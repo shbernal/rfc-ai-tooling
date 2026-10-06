@@ -1,0 +1,6525 @@
+{
+ "system": "rg",
+ "depth": 20,
+ "items": 226,
+ "validated": 0,
+ "splits": {
+  "dev": {
+   "overall": {
+    "items": 74,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.0405,
+    "document_recall@5": 0.1081,
+    "document_recall@10": 0.2027,
+    "document_budget@2000": 0.0,
+    "document_budget@8000": 0.0811,
+    "section_mrr@10": 0.0
+   },
+   "exact-term": {
+    "items": 14,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.1429,
+    "document_recall@5": 0.2143,
+    "document_recall@10": 0.3571,
+    "document_budget@2000": 0.0,
+    "document_budget@8000": 0.2143,
+    "section_mrr@10": 0.0
+   },
+   "multi-doc": {
+    "items": 13,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.0,
+    "document_recall@5": 0.2308,
+    "document_recall@10": 0.3077,
+    "document_budget@2000": 0.0,
+    "document_budget@8000": 0.1538,
+    "section_mrr@10": 0.0
+   },
+   "obsolescence": {
+    "items": 14,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.0714,
+    "document_recall@5": 0.0714,
+    "document_recall@10": 0.1429,
+    "document_budget@2000": 0.0,
+    "document_budget@8000": 0.0714,
+    "section_mrr@10": 0.0
+   },
+   "old-numbering": {
+    "items": 13,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.0,
+    "document_recall@5": 0.0,
+    "document_recall@10": 0.0,
+    "document_budget@2000": 0.0,
+    "document_budget@8000": 0.0,
+    "section_mrr@10": 0.0
+   },
+   "paraphrase": {
+    "items": 20,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.0,
+    "document_recall@5": 0.05,
+    "document_recall@10": 0.2,
+    "document_budget@2000": 0.0,
+    "document_budget@8000": 0.0,
+    "section_mrr@10": 0.0
+   },
+   "currency": {
+    "items": 14,
+    "current_first": 0.0714,
+    "avoid@5": 0.2143
+   }
+  },
+  "test": {
+   "overall": {
+    "items": 152,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.0526,
+    "document_recall@5": 0.1711,
+    "document_recall@10": 0.2895,
+    "document_budget@2000": 0.0197,
+    "document_budget@8000": 0.1053,
+    "section_mrr@10": 0.0
+   },
+   "exact-term": {
+    "items": 29,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.1034,
+    "document_recall@5": 0.2414,
+    "document_recall@10": 0.5172,
+    "document_budget@2000": 0.0345,
+    "document_budget@8000": 0.2069,
+    "section_mrr@10": 0.0
+   },
+   "multi-doc": {
+    "items": 27,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.1111,
+    "document_recall@5": 0.2222,
+    "document_recall@10": 0.3333,
+    "document_budget@2000": 0.037,
+    "document_budget@8000": 0.2222,
+    "section_mrr@10": 0.0
+   },
+   "obsolescence": {
+    "items": 29,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.0,
+    "document_recall@5": 0.1724,
+    "document_recall@10": 0.3103,
+    "document_budget@2000": 0.0,
+    "document_budget@8000": 0.0,
+    "section_mrr@10": 0.0
+   },
+   "old-numbering": {
+    "items": 27,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.037,
+    "document_recall@5": 0.1852,
+    "document_recall@10": 0.1852,
+    "document_budget@2000": 0.037,
+    "document_budget@8000": 0.0741,
+    "section_mrr@10": 0.0
+   },
+   "paraphrase": {
+    "items": 40,
+    "section_recall@1": 0.0,
+    "section_recall@5": 0.0,
+    "section_recall@10": 0.0,
+    "section_budget@2000": 0.0,
+    "section_budget@8000": 0.0,
+    "document_recall@1": 0.025,
+    "document_recall@5": 0.075,
+    "document_recall@10": 0.15,
+    "document_budget@2000": 0.0,
+    "document_budget@8000": 0.05,
+    "section_mrr@10": 0.0
+   },
+   "currency": {
+    "items": 29,
+    "current_first": 0.2414,
+    "avoid@5": 0.0345
+   }
+  }
+ },
+ "resolution": {
+  "pairs": 335,
+  "resolved": 1.0,
+  "unresolved": []
+ },
+ "per_item": [
+  {
+   "id": "bgp-local-pref-attribute",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 7,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2911",
+    "8011",
+    "7996#1",
+    "7996#3",
+    "2566#4",
+    "2566#5",
+    "4271",
+    "7991",
+    "4912#1",
+    "4912#2"
+   ]
+  },
+  {
+   "id": "bgp-notification-message",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 2,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "5415",
+    "4271",
+    "9788",
+    "8415",
+    "9915",
+    "3292",
+    "2801",
+    "4666",
+    "3315",
+    "5971"
+   ]
+  },
+  {
+   "id": "dhcp-option-51-lease-time",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8415",
+    "9915",
+    "6275",
+    "3775",
+    "1812",
+    "1716",
+    "1716#1.4",
+    "3315",
+    "4728",
+    "3116"
+   ]
+  },
+  {
+   "id": "dns-ds-record-rdata",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9580",
+    "4912#1",
+    "4949",
+    "8152",
+    "5359",
+    "5359#1",
+    "9022#3",
+    "9022#4.1",
+    "9129#1",
+    "9129#1.1"
+   ]
+  },
+  {
+   "id": "dns-edns-opt-record-wire-format",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "7970",
+    "6295",
+    "4695",
+    "2297",
+    "3585",
+    "3460",
+    "6386",
+    "905",
+    "3670",
+    "3949"
+   ]
+  },
+  {
+   "id": "dns-soa-minimum-negative-ttl",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "9110",
+    "5102#2.3",
+    "5102#3.1.1",
+    "2616",
+    "6787",
+    "6787#4.2",
+    "5661",
+    "8881",
+    "8038"
+   ]
+  },
+  {
+   "id": "dns-tc-bit-truncation",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9788",
+    "3261",
+    "7826",
+    "5415",
+    "3095",
+    "3292",
+    "9110",
+    "8415",
+    "2616",
+    "9915"
+   ]
+  },
+  {
+   "id": "http-412-precondition-failed",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 13,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "3010",
+    "7826",
+    "6120",
+    "8415",
+    "9915",
+    "4740"
+   ]
+  },
+  {
+   "id": "http-cache-control-no-store",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 12,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 15,
+   "top": [
+    "8506",
+    "4006",
+    "2616",
+    "2068",
+    "7826",
+    "3261",
+    "9110",
+    "7058",
+    "6230",
+    "7143"
+   ]
+  },
+  {
+   "id": "http-chunked-transfer-coding",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "9260",
+    "5661",
+    "9110",
+    "4960",
+    "2616",
+    "9635",
+    "9635#1.4",
+    "7991",
+    "9000"
+   ]
+  },
+  {
+   "id": "http-cookie-httponly",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "2911",
+    "5661",
+    "8011",
+    "7996#2.1",
+    "7996#3",
+    "3261",
+    "2566",
+    "2566#3",
+    "7991"
+   ]
+  },
+  {
+   "id": "http-retry-after-503",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 8,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "9788",
+    "7826",
+    "3095",
+    "8506",
+    "4006",
+    "2165",
+    "9110",
+    "2616",
+    "8299"
+   ]
+  },
+  {
+   "id": "http2-goaway-frame",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 3,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 1,
+   "top": [
+    "7540",
+    "6120",
+    "9113",
+    "9114",
+    "9000",
+    "2616",
+    "2068",
+    "9110",
+    "1190",
+    "1190#1"
+   ]
+  },
+  {
+   "id": "http3-settings-frame",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 7,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "7540",
+    "9113",
+    "8506",
+    "6120",
+    "9000",
+    "4006",
+    "9114",
+    "2616",
+    "1190",
+    "1190#1"
+   ]
+  },
+  {
+   "id": "icmpv6-packet-too-big",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9788",
+    "3261",
+    "5415",
+    "9110",
+    "8415",
+    "3292",
+    "9580",
+    "9000",
+    "9915",
+    "2297"
+   ]
+  },
+  {
+   "id": "imap-idle-command",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 6,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 16,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "9635",
+    "3530",
+    "9051",
+    "8415",
+    "9915",
+    "3010",
+    "2911"
+   ]
+  },
+  {
+   "id": "ip-header-dont-fragment-flag",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "3095",
+    "9110",
+    "5102",
+    "9788",
+    "7826",
+    "2616",
+    "5225",
+    "2068",
+    "6787"
+   ]
+  },
+  {
+   "id": "ipsec-esp-sequence-number",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "3261",
+    "9110",
+    "5102#1",
+    "5102#2.3",
+    "4134",
+    "4134#2.2",
+    "4695#1.2",
+    "6295#1.2"
+   ]
+  },
+  {
+   "id": "ipv6-router-advertisement-m-flag",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 15,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 16,
+   "top": [
+    "1583",
+    "1247",
+    "1247#1.1",
+    "2328",
+    "2178",
+    "5340",
+    "1716#1.4",
+    "1716#4.3.3",
+    "1716#5.3",
+    "1812"
+   ]
+  },
+  {
+   "id": "jose-alg-none-unsecured-jws",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 10,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1166",
+    "7515",
+    "1117",
+    "7520",
+    "7520#1",
+    "7520#1.1",
+    "6280",
+    "6280#1",
+    "1700",
+    "7518"
+   ]
+  },
+  {
+   "id": "json-string-escapes",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "7996#7.2",
+    "9880",
+    "7970",
+    "7515",
+    "7950",
+    "7950#1",
+    "7950#1.1",
+    "4011",
+    "4011#3",
+    "9635"
+   ]
+  },
+  {
+   "id": "jwt-exp-claim",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 4,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "1305",
+    "9901",
+    "9711",
+    "7519",
+    "9246",
+    "7273",
+    "1059",
+    "5905",
+    "2909",
+    "957"
+   ]
+  },
+  {
+   "id": "mime-quoted-printable",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 6,
+   "top": [
+    "2626#3.1",
+    "2626#3.2",
+    "9110",
+    "4910",
+    "2616",
+    "1521",
+    "7826",
+    "1341",
+    "4911",
+    "2068"
+   ]
+  },
+  {
+   "id": "ntp-kiss-o-death-rate",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 18,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 11,
+   "top": [
+    "9000",
+    "4728",
+    "9580",
+    "4340",
+    "4782",
+    "7401",
+    "3116",
+    "4828",
+    "3095",
+    "5348"
+   ]
+  },
+  {
+   "id": "oauth-invalid-grant-error",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 3,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "9635",
+    "9000",
+    "6749",
+    "9200",
+    "3435",
+    "8881",
+    "5661",
+    "5661#2.4",
+    "9260",
+    "6120"
+   ]
+  },
+  {
+   "id": "oauth-pkce-s256-code-challenge",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9110",
+    "5546",
+    "5546#1.1",
+    "6787",
+    "6787#1",
+    "9635",
+    "7231",
+    "7826",
+    "9930",
+    "2446#1.1"
+   ]
+  },
+  {
+   "id": "ospf-v3-receiving-hello-packets",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 6,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1583",
+    "2178",
+    "2328",
+    "1247",
+    "1247#1.1",
+    "5340",
+    "1716#1.4",
+    "1716#4.3.3",
+    "1716#5.3",
+    "1812"
+   ]
+  },
+  {
+   "id": "quic-path-challenge-frame",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "9000",
+    "6386",
+    "4158",
+    "1479",
+    "9113",
+    "6716",
+    "7540",
+    "9559",
+    "9559#1",
+    "8795"
+   ]
+  },
+  {
+   "id": "quic-stateless-reset",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "9000",
+    "9635",
+    "9200",
+    "8473",
+    "9767",
+    "6749",
+    "8693",
+    "9770",
+    "9312",
+    "1037"
+   ]
+  },
+  {
+   "id": "rtp-marker-bit",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 7,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "7826",
+    "3095",
+    "3261",
+    "6295",
+    "4695",
+    "9788",
+    "3550",
+    "6787",
+    "9110",
+    "9110#1.2"
+   ]
+  },
+  {
+   "id": "sctp-cookie-echo-chunk",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": 2,
+   "top": [
+    "9260",
+    "4960",
+    "2960",
+    "4460",
+    "6458",
+    "8540",
+    "7826",
+    "2083",
+    "7016",
+    "5971"
+   ]
+  },
+  {
+   "id": "sip-486-busy-here",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": 6,
+   "top": [
+    "3261",
+    "3666",
+    "3665",
+    "4740",
+    "5359",
+    "2543",
+    "3087",
+    "7131",
+    "7131#1",
+    "4497"
+   ]
+  },
+  {
+   "id": "smtp-421-service-not-available",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 14,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "9000",
+    "7826",
+    "6120",
+    "3010",
+    "8415",
+    "9915"
+   ]
+  },
+  {
+   "id": "snmp-getbulkrequest-pdu",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "7407",
+    "1142#3.6",
+    "1142#4.1",
+    "2741",
+    "5324#2",
+    "5324#3.4.4",
+    "5324#3.4.5",
+    "2257",
+    "5650#1",
+    "5650#2.1.1.1"
+   ]
+  },
+  {
+   "id": "ssh-msg-kexinit",
+   "stratum": "exact-term",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9580",
+    "9000",
+    "3095",
+    "7401",
+    "4728",
+    "4340",
+    "2178",
+    "9644",
+    "4880",
+    "2328"
+   ]
+  },
+  {
+   "id": "tcp-mss-option",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": true,
+    "8000": true
+   },
+   "avoid_rank": 7,
+   "top": [
+    "9293",
+    "1700",
+    "8415",
+    "9915",
+    "9768",
+    "1166",
+    "793#3",
+    "761#3",
+    "1340",
+    "8684"
+   ]
+  },
+  {
+   "id": "tcp-sack-permitted-option",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1700",
+    "8415",
+    "9293",
+    "9915",
+    "8684",
+    "5925",
+    "7414",
+    "4728",
+    "9768",
+    "3315"
+   ]
+  },
+  {
+   "id": "tftp-error-packet",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9110",
+    "9000",
+    "3261",
+    "4728",
+    "8881",
+    "5661",
+    "6295",
+    "9580",
+    "4695",
+    "3095"
+   ]
+  },
+  {
+   "id": "tls-close-notify-alert",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 10,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 3,
+   "top": [
+    "8881",
+    "5661",
+    "8446",
+    "7143",
+    "4949#2.2",
+    "4949#3.2",
+    "4949#3.5",
+    "5359",
+    "5359#1",
+    "9846"
+   ]
+  },
+  {
+   "id": "tls-hello-retry-request",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 8,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 5,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "8446",
+    "6120",
+    "7826",
+    "9846",
+    "3010",
+    "9930"
+   ]
+  },
+  {
+   "id": "tls-sni-server-name-extension",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "4912#1",
+    "4912#2",
+    "6120",
+    "8446",
+    "7826",
+    "9846"
+   ]
+  },
+  {
+   "id": "uri-percent-encoding",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 8,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4911",
+    "4910",
+    "6229#2",
+    "4997",
+    "3987",
+    "3108#1",
+    "3229",
+    "3986",
+    "1521",
+    "2616"
+   ]
+  },
+  {
+   "id": "websocket-ping-pong-frame",
+   "stratum": "exact-term",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 2,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "9000",
+    "6455",
+    "9113",
+    "3435",
+    "7540",
+    "6716",
+    "4960",
+    "4960#1.2",
+    "9260",
+    "9260#1.2"
+   ]
+  },
+  {
+   "id": "arp-find-hardware-address",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1841",
+    "5844",
+    "9135",
+    "9135#1",
+    "5555",
+    "3795",
+    "7361",
+    "9721",
+    "7600",
+    "7432"
+   ]
+  },
+  {
+   "id": "bgp-heartbeat-frequency",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "4271",
+    "8881",
+    "7826",
+    "5661",
+    "6733",
+    "3261",
+    "7143",
+    "3588",
+    "3720",
+    "9871"
+   ]
+  },
+  {
+   "id": "bgp-pick-between-equal-paths",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1583",
+    "2328",
+    "2178",
+    "1247",
+    "1247#1.1",
+    "1812",
+    "1716#1.4",
+    "1716#4.3.3",
+    "1716#5.3",
+    "5340"
+   ]
+  },
+  {
+   "id": "data-base64-safe-in-urls",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "7991",
+    "7991#1",
+    "7991#1.3.1",
+    "4911",
+    "4396",
+    "4910",
+    "8540",
+    "1341",
+    "2295",
+    "9788"
+   ]
+  },
+  {
+   "id": "dhcp-extend-before-expiry",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "9635",
+    "3530",
+    "4782",
+    "8415",
+    "9915",
+    "3010",
+    "3315"
+   ]
+  },
+  {
+   "id": "dns-allowed-characters-in-names",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4936",
+    "9498",
+    "7808",
+    "6781",
+    "9529",
+    "9529#1.1",
+    "4035",
+    "883",
+    "9499",
+    "8499"
+   ]
+  },
+  {
+   "id": "dns-avoid-repeating-names-in-packet",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9989",
+    "6762",
+    "3731",
+    "4931",
+    "5731",
+    "1479",
+    "6763",
+    "7489",
+    "6950",
+    "8766"
+   ]
+  },
+  {
+   "id": "dns-catch-all-entry-zone",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 13,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4912#2",
+    "9022",
+    "9989",
+    "3731",
+    "883",
+    "4931",
+    "6501#4",
+    "5731",
+    "5707#2",
+    "5707#3"
+   ]
+  },
+  {
+   "id": "dns-remember-nonexistent-name",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "2616",
+    "2068",
+    "7530",
+    "4186",
+    "3530",
+    "9111",
+    "7234",
+    "7826"
+   ]
+  },
+  {
+   "id": "dns-tcp-keep-session-open",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9000",
+    "6120",
+    "7143",
+    "3720",
+    "7540",
+    "1190",
+    "1190#1",
+    "9113",
+    "1819",
+    "2297"
+   ]
+  },
+  {
+   "id": "http-cache-guess-lifetime-without-expiry",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "8881",
+    "7530",
+    "3530",
+    "7826",
+    "3261",
+    "3010",
+    "6120",
+    "8415",
+    "2616"
+   ]
+  },
+  {
+   "id": "http-cache-shared-proxy-one-user-page",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "4949",
+    "4949#1",
+    "7826",
+    "7336",
+    "2626",
+    "2626#1",
+    "2626#2",
+    "7530",
+    "7862"
+   ]
+  },
+  {
+   "id": "http-concurrent-edit-overwrite",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2911",
+    "8011",
+    "8881",
+    "2566",
+    "5661",
+    "2743",
+    "2078",
+    "4825",
+    "5653",
+    "8353"
+   ]
+  },
+  {
+   "id": "http-cookie-hide-from-javascript",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "8881",
+    "7530",
+    "7826",
+    "3530",
+    "3261",
+    "3010",
+    "6120",
+    "8415",
+    "6787"
+   ]
+  },
+  {
+   "id": "http-cookie-shared-across-subdomains",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 9,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8299",
+    "8049",
+    "8466",
+    "3720",
+    "1244",
+    "8881",
+    "7143",
+    "5661",
+    "6265",
+    "1689#1"
+   ]
+  },
+  {
+   "id": "http-hsts-first-visit-weakness",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8299",
+    "8049",
+    "8881",
+    "1479",
+    "5661",
+    "8466",
+    "3060",
+    "7826",
+    "1244",
+    "4011"
+   ]
+  },
+  {
+   "id": "http-proxy-backend-disagree-message-boundaries",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "7826",
+    "9110",
+    "9635",
+    "2616",
+    "2543",
+    "5415",
+    "9788",
+    "2068",
+    "8415"
+   ]
+  },
+  {
+   "id": "http-redirect-keep-post",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 8,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "7826",
+    "2616",
+    "9051",
+    "2068",
+    "8881",
+    "8881#1.1",
+    "9110",
+    "2543",
+    "5661"
+   ]
+  },
+  {
+   "id": "http-resume-interrupted-download",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "9000",
+    "3010",
+    "7143",
+    "3720",
+    "3530",
+    "5547",
+    "1037"
+   ]
+  },
+  {
+   "id": "http-safe-to-resend-after-drop",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 12,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "9635",
+    "7530",
+    "3530",
+    "2616",
+    "7826",
+    "9000",
+    "8415",
+    "2068"
+   ]
+  },
+  {
+   "id": "http2-receiver-limit-sender",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "7826",
+    "3010",
+    "9635",
+    "8415",
+    "2616",
+    "9915"
+   ]
+  },
+  {
+   "id": "ip-ranges-for-internal-network",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5844",
+    "1841",
+    "3795",
+    "5555",
+    "7600",
+    "2893",
+    "6146",
+    "8299",
+    "8299#2",
+    "6144"
+   ]
+  },
+  {
+   "id": "ipsec-decide-encrypt-bypass-drop",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8299",
+    "9182",
+    "4110",
+    "9291",
+    "8049",
+    "8466",
+    "6645",
+    "7014",
+    "7016",
+    "7900"
+   ]
+  },
+  {
+   "id": "ipv4-pmtu-try-larger-again",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3454",
+    "9000",
+    "8881",
+    "8881#1.2",
+    "5661",
+    "5661#1.1",
+    "4158",
+    "1583",
+    "2178",
+    "2328"
+   ]
+  },
+  {
+   "id": "ipv6-address-already-in-use-check",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4187",
+    "1841",
+    "4186",
+    "8466",
+    "8466#1",
+    "8466#2",
+    "8224",
+    "7224#2",
+    "4474",
+    "8299"
+   ]
+  },
+  {
+   "id": "ipv6-double-colon-twice",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "6275",
+    "3775",
+    "9260",
+    "4861",
+    "2461",
+    "4960",
+    "1142",
+    "1142#3.1",
+    "1142#3.3",
+    "9777"
+   ]
+  },
+  {
+   "id": "ipv6-icmp-error-throttling",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5388",
+    "7219",
+    "6733",
+    "8881",
+    "5661",
+    "3588",
+    "8829",
+    "9429",
+    "9000",
+    "4006"
+   ]
+  },
+  {
+   "id": "ipv6-who-splits-oversized-packets",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1583",
+    "1247",
+    "1247#1",
+    "2178",
+    "2328",
+    "2911",
+    "8011",
+    "1812",
+    "1716#1.4",
+    "5340"
+   ]
+  },
+  {
+   "id": "jose-signed-token-stop-working",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1305",
+    "9635",
+    "9788",
+    "9200",
+    "8473",
+    "9767",
+    "6749",
+    "8693",
+    "6819",
+    "9770"
+   ]
+  },
+  {
+   "id": "json-same-key-twice",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2911",
+    "9580",
+    "5324",
+    "5324#1",
+    "4949#1",
+    "4949#3.5",
+    "4949#4",
+    "2566",
+    "2566#2",
+    "8152"
+   ]
+  },
+  {
+   "id": "mail-imap-push-new-messages",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "8881#1.1",
+    "5661",
+    "5661#1.1",
+    "2821",
+    "5321",
+    "4601",
+    "4601#2.1",
+    "821",
+    "788"
+   ]
+  },
+  {
+   "id": "mail-signature-survives-rewrapping",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 12,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9421",
+    "9989",
+    "5126",
+    "9580",
+    "3731",
+    "7450",
+    "4931",
+    "3126",
+    "5731",
+    "1479"
+   ]
+  },
+  {
+   "id": "mail-smtp-line-single-period",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2626#3.7",
+    "2626#6",
+    "2626#7.2",
+    "5650",
+    "4706",
+    "8621",
+    "7826",
+    "1689",
+    "1689#1",
+    "1521"
+   ]
+  },
+  {
+   "id": "mail-smtp-retry-undeliverable",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1122",
+    "1122#1",
+    "878",
+    "851",
+    "1000",
+    "1689",
+    "1689#1",
+    "8621",
+    "907",
+    "3732"
+   ]
+  },
+  {
+   "id": "mail-spf-too-many-includes",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 13,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9989",
+    "8881",
+    "5661",
+    "5661#1.6",
+    "6120",
+    "3731",
+    "6749",
+    "1479",
+    "4931",
+    "5731"
+   ]
+  },
+  {
+   "id": "mail-underscore-subject-decoding",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "9635",
+    "3530",
+    "8415",
+    "9915",
+    "3010",
+    "3315",
+    "2911"
+   ]
+  },
+  {
+   "id": "ntp-server-tells-client-back-off",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "7826",
+    "8415",
+    "3010",
+    "9915",
+    "9635",
+    "3315"
+   ]
+  },
+  {
+   "id": "oauth-attacker-injects-own-code",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9635",
+    "3921#1.2",
+    "3921#2.1",
+    "3921#2.1.1",
+    "6121",
+    "6121#1.3",
+    "5629",
+    "4740",
+    "8506",
+    "3666"
+   ]
+  },
+  {
+   "id": "oauth-mobile-app-code-stolen",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1583",
+    "7609",
+    "1247",
+    "1247#1",
+    "1247#1.1",
+    "8795",
+    "2178",
+    "2328",
+    "2642",
+    "5340"
+   ]
+  },
+  {
+   "id": "oauth-renew-without-login",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2743",
+    "2078",
+    "2744",
+    "5653",
+    "2853",
+    "8353",
+    "2614",
+    "3867",
+    "2479",
+    "6223"
+   ]
+  },
+  {
+   "id": "ospf-broadcast-lan-many-routers",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 4,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1583",
+    "1247",
+    "2178",
+    "2328",
+    "7609",
+    "4601",
+    "2642",
+    "7761",
+    "8795",
+    "3215"
+   ]
+  },
+  {
+   "id": "pki-restrict-subordinate-ca-domains",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 7,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "1142",
+    "5661",
+    "3538",
+    "4949#1",
+    "9810",
+    "5280",
+    "5280#1",
+    "5280#2",
+    "4210"
+   ]
+  },
+  {
+   "id": "quic-server-lost-state-after-crash",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 3,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881#1.2",
+    "8881#1.5",
+    "9000",
+    "5661",
+    "5661#1.1",
+    "5661#1.4",
+    "1122",
+    "1000",
+    "878",
+    "851"
+   ]
+  },
+  {
+   "id": "quic-server-reflect-spoofed-flood",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 8,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1812",
+    "1716",
+    "1716#1.4",
+    "3344",
+    "3220",
+    "5944",
+    "1195",
+    "9000",
+    "1122",
+    "9484"
+   ]
+  },
+  {
+   "id": "quic-survive-wifi-to-cellular",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 15,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "6275",
+    "3775",
+    "7143",
+    "5213",
+    "3720",
+    "3344",
+    "5944",
+    "3220"
+   ]
+  },
+  {
+   "id": "rtp-control-traffic-big-conference",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1583",
+    "7609",
+    "6120",
+    "1247",
+    "1247#1",
+    "1247#1.1",
+    "8795",
+    "2178",
+    "2328",
+    "2642"
+   ]
+  },
+  {
+   "id": "sctp-multihomed-link-dies",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 2,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 3,
+   "top": [
+    "1012",
+    "9260",
+    "4960",
+    "6458",
+    "2960",
+    "5359",
+    "3666",
+    "3435",
+    "3064",
+    "4974"
+   ]
+  },
+  {
+   "id": "snmp-v3-clock-drift-rejected",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "7826",
+    "5944",
+    "9110",
+    "3344",
+    "3220",
+    "2616",
+    "8881",
+    "8881#1.1",
+    "2002"
+   ]
+  },
+  {
+   "id": "ssh-change-keys-long-session",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "6120",
+    "1190",
+    "1190#1",
+    "1819",
+    "2473",
+    "7540",
+    "9000",
+    "3920#3.1",
+    "3920#3.2",
+    "7728"
+   ]
+  },
+  {
+   "id": "tcp-closed-socket-lingers",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 16,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2297",
+    "3292",
+    "9000",
+    "7143",
+    "3720",
+    "3435",
+    "6081",
+    "9622",
+    "8881",
+    "7609"
+   ]
+  },
+  {
+   "id": "tcp-probe-silent-connection",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 10,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 20,
+   "top": [
+    "9000",
+    "7143",
+    "3720",
+    "3435",
+    "9622",
+    "2297",
+    "8881",
+    "7826",
+    "3292",
+    "9293"
+   ]
+  },
+  {
+   "id": "tcp-small-writes-get-delayed",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2642",
+    "3292",
+    "8881",
+    "8881#1.1",
+    "2297",
+    "5661",
+    "5661#1.7.3.3",
+    "5661#1.7.4",
+    "6458",
+    "2643#1.2"
+   ]
+  },
+  {
+   "id": "tcp-three-duplicate-acks-resend",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9260",
+    "1700",
+    "1305",
+    "4960",
+    "9293",
+    "7414",
+    "5925",
+    "2960",
+    "5044",
+    "1340"
+   ]
+  },
+  {
+   "id": "tls-detect-forced-older-version",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 6,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 3,
+   "top": [
+    "8299",
+    "8049",
+    "8446",
+    "8466",
+    "9190",
+    "9846",
+    "6876",
+    "9930",
+    "5359#1",
+    "5359#2.1"
+   ]
+  },
+  {
+   "id": "tls-early-data-resent-by-attacker",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "7826",
+    "9635",
+    "9110",
+    "2616",
+    "8881",
+    "5661",
+    "2543",
+    "2068",
+    "4782"
+   ]
+  },
+  {
+   "id": "tls-hide-message-lengths",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9788",
+    "3292",
+    "5415",
+    "8415",
+    "9915",
+    "4666",
+    "1479",
+    "2297",
+    "3315",
+    "3332"
+   ]
+  },
+  {
+   "id": "totp-code-off-by-a-few-seconds",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "7826",
+    "3010",
+    "8415",
+    "4740",
+    "9915",
+    "9110"
+   ]
+  },
+  {
+   "id": "udp-skip-error-detection",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1700",
+    "9868",
+    "5740",
+    "1340",
+    "8085",
+    "6936",
+    "3940",
+    "9132",
+    "8782",
+    "5348"
+   ]
+  },
+  {
+   "id": "uri-collapse-dot-dot-in-link",
+   "stratum": "paraphrase",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1583",
+    "1247",
+    "1247#1",
+    "1247#1.1",
+    "6275",
+    "3775",
+    "7609",
+    "2178",
+    "2328",
+    "4861"
+   ]
+  },
+  {
+   "id": "websocket-why-client-scrambles-frames",
+   "stratum": "paraphrase",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "8881#1.1",
+    "3292",
+    "2297",
+    "5661",
+    "5661#1.1",
+    "7143",
+    "9000",
+    "7826",
+    "3720"
+   ]
+  },
+  {
+   "id": "base64-padding-required",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "5661",
+    "2626",
+    "2626#1",
+    "1000",
+    "2156",
+    "7414",
+    "7826",
+    "3805",
+    "3790"
+   ]
+  },
+  {
+   "id": "bgp-route-selection-tie-breaking",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 2,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 20,
+   "top": [
+    "1012",
+    "4271",
+    "5661",
+    "2626",
+    "2626#1",
+    "2156",
+    "1000",
+    "9871",
+    "7826",
+    "7414"
+   ]
+  },
+  {
+   "id": "dhcpv6-duid-types",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 16,
+   "top": [
+    "1012",
+    "5661",
+    "2626",
+    "2626#1",
+    "2156",
+    "1000",
+    "9243",
+    "7414",
+    "7826",
+    "4949"
+   ]
+  },
+  {
+   "id": "dnssec-ds-record",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "5661",
+    "3261",
+    "2626",
+    "2626#1",
+    "7826",
+    "2156",
+    "4949",
+    "1000",
+    "3805"
+   ]
+  },
+  {
+   "id": "http-206-partial-content",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 6,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 8,
+   "top": [
+    "5661",
+    "8881",
+    "7826",
+    "3261",
+    "7530",
+    "9110",
+    "3530",
+    "2616",
+    "2068",
+    "6787"
+   ]
+  },
+  {
+   "id": "http-302-post-to-get",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 19,
+   "top": [
+    "1012",
+    "5661",
+    "7826",
+    "2626",
+    "2626#1",
+    "1000",
+    "2156",
+    "7414",
+    "4949",
+    "3261"
+   ]
+  },
+  {
+   "id": "http-cache-freshness-lifetime",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 1,
+   "top": [
+    "2616",
+    "2068",
+    "3261",
+    "7826",
+    "9110",
+    "5661",
+    "1012",
+    "7143",
+    "2626",
+    "2626#1"
+   ]
+  },
+  {
+   "id": "http-chunked-coding-per-rfc2616",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 2,
+   "top": [
+    "1012",
+    "2616",
+    "2626",
+    "2626#1",
+    "9110",
+    "5661",
+    "7826",
+    "2068",
+    "1000",
+    "2156"
+   ]
+  },
+  {
+   "id": "http-cookie-domain-leading-dot",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "2911",
+    "8011",
+    "8881",
+    "2566",
+    "7991",
+    "7996",
+    "7530",
+    "1012",
+    "2801"
+   ]
+  },
+  {
+   "id": "http-host-header-required",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 7,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 6,
+   "top": [
+    "5661",
+    "8881",
+    "7826",
+    "3261",
+    "7530",
+    "2616",
+    "9110",
+    "3530",
+    "2068",
+    "6787"
+   ]
+  },
+  {
+   "id": "http-if-none-match-comparison",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 18,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 15,
+   "top": [
+    "5661",
+    "1012",
+    "7826",
+    "1166",
+    "3261",
+    "2626",
+    "2626#1",
+    "1000",
+    "2156",
+    "8881"
+   ]
+  },
+  {
+   "id": "http2-priority-deprecated",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 10,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 4,
+   "top": [
+    "6120",
+    "1012",
+    "7826",
+    "7540",
+    "5661",
+    "9110",
+    "2616",
+    "2626",
+    "2626#1",
+    "9113"
+   ]
+  },
+  {
+   "id": "http2-settings-defaults",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 19,
+   "top": [
+    "5661",
+    "7826",
+    "1012",
+    "2616",
+    "2911",
+    "3805",
+    "9110",
+    "2626",
+    "2626#1",
+    "8011"
+   ]
+  },
+  {
+   "id": "ike-nat-traversal",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 3,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 4,
+   "top": [
+    "1012",
+    "5661",
+    "7296",
+    "5996",
+    "2626",
+    "2626#1",
+    "1000",
+    "7826",
+    "6071",
+    "2156"
+   ]
+  },
+  {
+   "id": "imap-uidvalidity",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "5661",
+    "2626",
+    "2626#1",
+    "2156",
+    "1000",
+    "7414",
+    "7826",
+    "3261",
+    "4949"
+   ]
+  },
+  {
+   "id": "ipsec-esp-extended-sequence-number",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "8881",
+    "1012",
+    "4134",
+    "4134#2",
+    "2626",
+    "2626#1",
+    "7143",
+    "6071",
+    "4949"
+   ]
+  },
+  {
+   "id": "ipv6-duplicate-address-detection",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "6275",
+    "3775",
+    "1012",
+    "1000",
+    "2626",
+    "2626#1",
+    "5661",
+    "2156",
+    "4861",
+    "1812"
+   ]
+  },
+  {
+   "id": "ipv6-extension-header-order",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "3095",
+    "9000",
+    "5661",
+    "7401",
+    "7826",
+    "6275",
+    "2626",
+    "2626#1",
+    "5102"
+   ]
+  },
+  {
+   "id": "json-duplicate-object-keys",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2911",
+    "5324",
+    "5661",
+    "2566",
+    "3805",
+    "1012",
+    "5650",
+    "5650#1",
+    "3591",
+    "3591#1"
+   ]
+  },
+  {
+   "id": "json-utf8-encoding",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "1012",
+    "7530",
+    "2626",
+    "2626#1",
+    "7826",
+    "3261",
+    "8881",
+    "1000",
+    "2156"
+   ]
+  },
+  {
+   "id": "kerberos-encrypted-timestamp-preauth",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 3,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "4949",
+    "4120",
+    "5661",
+    "2626",
+    "2626#1",
+    "5792",
+    "7826",
+    "1000",
+    "2801"
+   ]
+  },
+  {
+   "id": "mail-date-header-format",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "7826",
+    "9788",
+    "3261",
+    "2616",
+    "8415",
+    "5415",
+    "2626",
+    "2626#1",
+    "2156",
+    "9110"
+   ]
+  },
+  {
+   "id": "mail-line-length-limit",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2626",
+    "2626#1",
+    "8415",
+    "5415",
+    "9788",
+    "7826",
+    "1012",
+    "3292",
+    "9915",
+    "5661"
+   ]
+  },
+  {
+   "id": "mail-message-id-header",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "7826",
+    "9788",
+    "5661",
+    "2801",
+    "8881",
+    "6787",
+    "8415",
+    "5415",
+    "2156"
+   ]
+  },
+  {
+   "id": "mime-base64-transfer-encoding",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 12,
+   "top": [
+    "7826",
+    "5661",
+    "1012",
+    "9110",
+    "9788",
+    "2156",
+    "2626",
+    "2626#1",
+    "2616",
+    "3261"
+   ]
+  },
+  {
+   "id": "ntp-timestamp-format",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 16,
+   "top": [
+    "1012",
+    "2626",
+    "2626#1",
+    "5661",
+    "7826",
+    "1000",
+    "5102",
+    "7143",
+    "2156",
+    "6295"
+   ]
+  },
+  {
+   "id": "sip-via-branch-parameter",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": 8,
+   "top": [
+    "3261",
+    "5359",
+    "3666",
+    "3665",
+    "4740",
+    "7826",
+    "5661",
+    "2543",
+    "1012",
+    "2626"
+   ]
+  },
+  {
+   "id": "smtp-helo-ehlo-argument",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 18,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "8881",
+    "7530",
+    "3530",
+    "9635",
+    "8415",
+    "7826",
+    "3010",
+    "9915",
+    "8011"
+   ]
+  },
+  {
+   "id": "smtp-null-reverse-path",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 2,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 6,
+   "top": [
+    "1012",
+    "5321",
+    "5661",
+    "2626",
+    "2626#1",
+    "2821",
+    "1000",
+    "2156",
+    "7826",
+    "3261"
+   ]
+  },
+  {
+   "id": "smtp-retry-interval",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 6,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 13,
+   "top": [
+    "2156",
+    "1012",
+    "5661",
+    "7826",
+    "1327",
+    "5321",
+    "2626",
+    "2626#1",
+    "2801",
+    "1000"
+   ]
+  },
+  {
+   "id": "snmp-getbulk-request",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "5661",
+    "3805",
+    "2626",
+    "2626#1",
+    "5324",
+    "5324#1",
+    "5650",
+    "5650#1",
+    "2156"
+   ]
+  },
+  {
+   "id": "spf-dns-lookup-limit",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 15,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "5661",
+    "6762",
+    "2626",
+    "2626#1",
+    "1000",
+    "3261",
+    "2156",
+    "7414",
+    "4949"
+   ]
+  },
+  {
+   "id": "syslog-pri-field",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "1012",
+    "8011",
+    "8881",
+    "5545",
+    "7826",
+    "3261",
+    "7970",
+    "2911",
+    "2626"
+   ]
+  },
+  {
+   "id": "tcp-handshake-per-rfc793",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 5,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1700",
+    "1012",
+    "7414",
+    "5661",
+    "9293",
+    "2626",
+    "2626#1",
+    "7826",
+    "1000",
+    "1340"
+   ]
+  },
+  {
+   "id": "tcp-timestamps-option",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1700",
+    "1012",
+    "8415",
+    "7414",
+    "9293",
+    "2626",
+    "2626#1",
+    "1000",
+    "9915",
+    "5661"
+   ]
+  },
+  {
+   "id": "tls-1-0-still-allowed",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "1012",
+    "7826",
+    "8446",
+    "9846",
+    "6120",
+    "8881",
+    "2626",
+    "2626#1",
+    "2156"
+   ]
+  },
+  {
+   "id": "tls-1-2-recommended-cipher-suites",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "8446",
+    "9846",
+    "4949",
+    "5661",
+    "2626",
+    "2626#1",
+    "7826",
+    "1000",
+    "2156"
+   ]
+  },
+  {
+   "id": "tls-1-2-renegotiation-safety",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "8881",
+    "7530",
+    "3530",
+    "7826",
+    "6120",
+    "3010",
+    "8446",
+    "8415",
+    "9846"
+   ]
+  },
+  {
+   "id": "tls-1-3-0rtt-replay",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 7,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 6,
+   "top": [
+    "5661",
+    "4949",
+    "8881",
+    "1012",
+    "7143",
+    "8446",
+    "9846",
+    "5102",
+    "3720",
+    "2828"
+   ]
+  },
+  {
+   "id": "tls-1-3-version-negotiation",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 13,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 12,
+   "top": [
+    "3253",
+    "2626",
+    "2626#1",
+    "1000",
+    "1012",
+    "5661",
+    "2896",
+    "5000",
+    "4949",
+    "1700"
+   ]
+  },
+  {
+   "id": "uri-escaping-per-rfc2396",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "3805",
+    "5661",
+    "2626",
+    "2626#1",
+    "7826",
+    "2156",
+    "5324",
+    "5650",
+    "5650#1"
+   ]
+  },
+  {
+   "id": "uri-relative-reference-resolution",
+   "stratum": "obsolescence",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "5661",
+    "2626",
+    "2626#1",
+    "4949",
+    "7826",
+    "1000",
+    "7414",
+    "2156",
+    "8776"
+   ]
+  },
+  {
+   "id": "utf8-max-sequence-length",
+   "stratum": "obsolescence",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5661",
+    "1012",
+    "8881",
+    "4134",
+    "4134#1",
+    "2626",
+    "2626#1",
+    "7826",
+    "2156",
+    "7530"
+   ]
+  },
+  {
+   "id": "bgp-ebgp-default-no-policy",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1479",
+    "7826",
+    "8881",
+    "3261",
+    "6794",
+    "5661",
+    "6295",
+    "4695",
+    "3060",
+    "7143"
+   ]
+  },
+  {
+   "id": "bgp-malformed-update-session-reset",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 10,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "2911",
+    "5661",
+    "7996#3",
+    "7996#4",
+    "7996#7.2",
+    "8011",
+    "2566#4",
+    "2566#5",
+    "4271"
+   ]
+  },
+  {
+   "id": "bgp-maximum-message-length",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 2,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "9788",
+    "4271",
+    "5415",
+    "3292",
+    "8415",
+    "9915",
+    "1479",
+    "2297",
+    "3315",
+    "5036"
+   ]
+  },
+  {
+   "id": "dhcp-server-echo-client-identifier",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "8415",
+    "9915",
+    "3010",
+    "9635",
+    "7826",
+    "3315"
+   ]
+  },
+  {
+   "id": "dns-any-query-minimal-response",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "4912#1",
+    "6120",
+    "3010",
+    "7826",
+    "3921",
+    "3921#2"
+   ]
+  },
+  {
+   "id": "dns-cname-with-other-records",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4912",
+    "6762",
+    "9022",
+    "5707",
+    "5707#1",
+    "6763",
+    "6501#3",
+    "6501#3.3.1",
+    "6501#4.2.1",
+    "2626#1"
+   ]
+  },
+  {
+   "id": "dns-negative-answer-cache-ttl",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2616",
+    "2068",
+    "9111",
+    "7234",
+    "8881",
+    "8881#1.7",
+    "8881#1.8.4",
+    "6762",
+    "6762#1",
+    "5661"
+   ]
+  },
+  {
+   "id": "dns-nxdomain-cut-subdomains",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5359",
+    "5359#1",
+    "3666",
+    "3666#1",
+    "3666#1.1",
+    "3665",
+    "3665#1",
+    "3665#1.1",
+    "8795",
+    "8795#2"
+   ]
+  },
+  {
+   "id": "dns-qdcount-multiple-questions",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9788",
+    "5415",
+    "5971",
+    "8415",
+    "3292",
+    "9915",
+    "6762",
+    "1479",
+    "2297",
+    "3315"
+   ]
+  },
+  {
+   "id": "dns-referral-glue-truncation",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "3261",
+    "7826",
+    "4912#2",
+    "2616",
+    "9051",
+    "9110"
+   ]
+  },
+  {
+   "id": "dns-serve-stale-expired-records",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "6762",
+    "8499",
+    "9499",
+    "8881",
+    "8881#1.1",
+    "6763",
+    "5661",
+    "5661#1.4",
+    "6950",
+    "8766"
+   ]
+  },
+  {
+   "id": "dns-tcp-idle-connection-timeout",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "7826",
+    "9000",
+    "3010",
+    "6120",
+    "7609",
+    "9293"
+   ]
+  },
+  {
+   "id": "dns-ttl-maximum-value",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "9110",
+    "9788",
+    "6762",
+    "5102#2.3",
+    "5102#3.2.1",
+    "6787",
+    "8881#1.7",
+    "8881#2.4",
+    "5661#1.6"
+   ]
+  },
+  {
+   "id": "dnssec-aggressive-nsec-synthesis",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 2,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "6762",
+    "4035",
+    "883",
+    "9499",
+    "9499#1",
+    "8499",
+    "8499#1",
+    "9498",
+    "7129",
+    "9462"
+   ]
+  },
+  {
+   "id": "dnssec-cd-bit-upstream-queries",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "3538",
+    "4601",
+    "7761",
+    "6550#1",
+    "6550#1.1",
+    "7143",
+    "2178#1.2",
+    "2178#2.1.1"
+   ]
+  },
+  {
+   "id": "http-connect-rejection-close-connection",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5359",
+    "5359#1",
+    "3261",
+    "7826",
+    "9110",
+    "2616",
+    "3666",
+    "3665",
+    "2068",
+    "9635"
+   ]
+  },
+  {
+   "id": "ikev2-diffie-hellman-group-requirements",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 9,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "8881#1.2",
+    "1689",
+    "2911",
+    "2911#1",
+    "5661#1.1",
+    "8011",
+    "4306",
+    "7296",
+    "5996"
+   ]
+  },
+  {
+   "id": "ikev2-signature-auth-hash-negotiation",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9580",
+    "9421",
+    "4949",
+    "4949#2.2",
+    "4949#3.5",
+    "2801",
+    "5126",
+    "2828#3",
+    "4186",
+    "4880"
+   ]
+  },
+  {
+   "id": "ipsec-tunnel-ecn-decapsulation",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 3,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "3168",
+    "6679",
+    "4301",
+    "6040",
+    "9788",
+    "6071",
+    "9061",
+    "9930",
+    "2473",
+    "9012"
+   ]
+  },
+  {
+   "id": "ipv4-id-field-atomic-datagrams",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "3261",
+    "9000",
+    "5102#1",
+    "9110",
+    "2178",
+    "2328",
+    "1583",
+    "3538"
+   ]
+  },
+  {
+   "id": "ipv6-address-canonical-text-form",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3454",
+    "6275",
+    "3775",
+    "5892",
+    "5892#1",
+    "5892#2.2",
+    "1345",
+    "1345#1",
+    "8881",
+    "5661"
+   ]
+  },
+  {
+   "id": "ipv6-hop-by-hop-router-processing",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "7826",
+    "6275",
+    "3095",
+    "3775",
+    "9788",
+    "2178",
+    "1583",
+    "2328",
+    "1247#1"
+   ]
+  },
+  {
+   "id": "ipv6-interface-id-eui64-required",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "5340",
+    "4779",
+    "6275",
+    "3775",
+    "2740",
+    "6386",
+    "9386",
+    "4546",
+    "1841",
+    "5213"
+   ]
+  },
+  {
+   "id": "ipv6-nd-fragmented-router-advertisement",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 13,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1583",
+    "1247",
+    "1247#1.1",
+    "2328",
+    "2178",
+    "1812",
+    "1716#1.4",
+    "1716#4.3.3",
+    "1716#5.3",
+    "5340"
+   ]
+  },
+  {
+   "id": "jwt-alg-none-unsecured",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "1166",
+    "5661",
+    "3538",
+    "7826",
+    "1142",
+    "1142#3.6",
+    "3253",
+    "3261",
+    "2622"
+   ]
+  },
+  {
+   "id": "mail-from-header-group-syntax",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9788",
+    "9051",
+    "3261",
+    "7826",
+    "9594",
+    "9110",
+    "5415",
+    "3095",
+    "3501",
+    "6787"
+   ]
+  },
+  {
+   "id": "ntp-client-source-port-randomization",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "9635",
+    "3530",
+    "8415",
+    "7826",
+    "1700",
+    "9915",
+    "3010"
+   ]
+  },
+  {
+   "id": "ntp-mac-algorithm-md5",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4949#1",
+    "4949#2.2",
+    "4949#2.8",
+    "9580",
+    "2828#1",
+    "2828#2.2",
+    "2828#3",
+    "8152",
+    "6063",
+    "1507"
+   ]
+  },
+  {
+   "id": "oauth-implicit-grant-still-recommended",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 9,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "8881#1.2",
+    "8881#1.5",
+    "5661",
+    "5661#1.1",
+    "5661#1.4",
+    "9635",
+    "6819",
+    "6749",
+    "7530"
+   ]
+  },
+  {
+   "id": "oauth-native-app-loopback-redirect",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 10,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "9635",
+    "3261",
+    "7826",
+    "7530",
+    "2911",
+    "3530",
+    "8011",
+    "6749"
+   ]
+  },
+  {
+   "id": "oauth-password-grant-allowed",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 2,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "3253",
+    "6749",
+    "4918",
+    "1507",
+    "1507#1.1",
+    "6787",
+    "9110",
+    "2518",
+    "6819",
+    "9635"
+   ]
+  },
+  {
+   "id": "sip-invite-2xx-transaction-state",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 3,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "3261",
+    "2543",
+    "7530",
+    "5359",
+    "3665",
+    "3666",
+    "3530",
+    "4740"
+   ]
+  },
+  {
+   "id": "sip-non-invite-408-timeout",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "2543",
+    "3666",
+    "3665",
+    "5359",
+    "7826",
+    "4740",
+    "9110",
+    "8881",
+    "2616"
+   ]
+  },
+  {
+   "id": "smtp-host-never-accepts-mail-reply",
+   "stratum": "multi-doc",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": 11,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "8415",
+    "9915",
+    "3010",
+    "9635",
+    "7826",
+    "3315"
+   ]
+  },
+  {
+   "id": "tcp-icmp-source-quench-handling",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "1122",
+    "1812",
+    "1716#4.3",
+    "4601",
+    "5533",
+    "4728",
+    "8433",
+    "8433#1.1",
+    "8433#2",
+    "7219"
+   ]
+  },
+  {
+   "id": "tcp-rst-challenge-ack",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": true,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "9293",
+    "1700",
+    "8881",
+    "8881#1.1",
+    "5661",
+    "5661#1.6",
+    "4134#2.2",
+    "793#3",
+    "1013",
+    "4340"
+   ]
+  },
+  {
+   "id": "timestamp-unknown-local-offset-z",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "2626",
+    "2626#1",
+    "8448",
+    "5661",
+    "9385",
+    "1000",
+    "7826",
+    "2156",
+    "7414"
+   ]
+  },
+  {
+   "id": "tls-max-fragment-length-replacement",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "5359#1",
+    "5359#2.1",
+    "3530",
+    "9635",
+    "8415",
+    "8446",
+    "2911"
+   ]
+  },
+  {
+   "id": "tls-ocsp-stapling-tls13",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "9110",
+    "7826",
+    "2616",
+    "2068",
+    "2543",
+    "2801",
+    "7143",
+    "9635",
+    "8881"
+   ]
+  },
+  {
+   "id": "x509-explicittext-encoding",
+   "stratum": "multi-doc",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 4,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "4949",
+    "4949#2.3",
+    "4949#2.5",
+    "5280",
+    "9810",
+    "3280",
+    "1479",
+    "2828",
+    "2828#2.2",
+    "2828#3"
+   ]
+  },
+  {
+   "id": "arp-ethernet-address-resolution",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "6275",
+    "3775",
+    "2626",
+    "4949",
+    "1122",
+    "1812",
+    "1716",
+    "1716#1.1",
+    "4861",
+    "2461"
+   ]
+  },
+  {
+   "id": "arpanet-ascii-control-character-meanings",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8506",
+    "4006",
+    "1000",
+    "4949",
+    "9543",
+    "9522",
+    "1470",
+    "2328",
+    "2178",
+    "1504"
+   ]
+  },
+  {
+   "id": "arpanet-host-host-protocol-1970",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1000",
+    "2626",
+    "8881",
+    "2178",
+    "2328",
+    "1583",
+    "1812",
+    "5000",
+    "1247",
+    "1716"
+   ]
+  },
+  {
+   "id": "arpanet-junk-mail-imp-refusal",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1000",
+    "2626",
+    "2626#1",
+    "2821",
+    "5321",
+    "1700",
+    "788",
+    "821",
+    "1123",
+    "907"
+   ]
+  },
+  {
+   "id": "arpanet-ncp-to-tcp-transition",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1700",
+    "1812",
+    "1716",
+    "1716#1.4",
+    "1122",
+    "9293",
+    "7414",
+    "1340",
+    "1195",
+    "5925"
+   ]
+  },
+  {
+   "id": "arpanet-october-1980-collapse",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1700",
+    "1190",
+    "1190#1",
+    "5971",
+    "2705",
+    "9385#10.1",
+    "9385#10.2",
+    "6020",
+    "6733",
+    "5359"
+   ]
+  },
+  {
+   "id": "arpanet-rfc1-host-software",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1012",
+    "1000",
+    "5661",
+    "2626",
+    "2626#1",
+    "4949",
+    "8412",
+    "7826",
+    "2156",
+    "7414"
+   ]
+  },
+  {
+   "id": "arpanet-socket-definition",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "8881#1.1",
+    "5661",
+    "5661#1.4",
+    "9000",
+    "6295#1.2",
+    "7143",
+    "4340",
+    "4695#1.2",
+    "3720"
+   ]
+  },
+  {
+   "id": "arpanet-socket-number-assignments",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1000",
+    "2178",
+    "2328",
+    "1583",
+    "1504",
+    "1247",
+    "1247#1.1",
+    "4949",
+    "9051",
+    "1700"
+   ]
+  },
+  {
+   "id": "bootp-booting-through-gateways",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "7826",
+    "3261",
+    "9635",
+    "8415",
+    "3010",
+    "9915"
+   ]
+  },
+  {
+   "id": "congestion-infinite-storage-fair-queuing",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "2178",
+    "2328",
+    "9000",
+    "1504",
+    "1583",
+    "1812",
+    "1247",
+    "1247#1.1",
+    "1716",
+    "1716#5.3"
+   ]
+  },
+  {
+   "id": "finger-original-name-protocol",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "3530",
+    "7530",
+    "9635",
+    "4912",
+    "4912#1",
+    "3010",
+    "8415",
+    "2911"
+   ]
+  },
+  {
+   "id": "hosts-txt-hostname-syntax",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 17,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4912",
+    "4949",
+    "2626",
+    "9022",
+    "2828",
+    "1122",
+    "6501",
+    "1000",
+    "1689",
+    "883"
+   ]
+  },
+  {
+   "id": "icmp-echo-identifier-sequence",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4134",
+    "8881",
+    "8881#1.7",
+    "5661",
+    "5661#1.6",
+    "5912#1",
+    "5912#1.1",
+    "5912#2",
+    "8415",
+    "2459"
+   ]
+  },
+  {
+   "id": "ip-broadcast-all-ones-address",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1812",
+    "1716",
+    "1716#1.4",
+    "6275",
+    "3775",
+    "8881",
+    "1122",
+    "3344",
+    "5661",
+    "5944"
+   ]
+  },
+  {
+   "id": "ip-header-time-to-live",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "7826",
+    "3261",
+    "9110",
+    "3095",
+    "9788",
+    "5102",
+    "2616",
+    "8881#1.7",
+    "8881#1.8.1",
+    "8881#1.8.2.2"
+   ]
+  },
+  {
+   "id": "ip-over-ethernet-ethertype",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4912",
+    "4912#1",
+    "5102",
+    "8881",
+    "5661",
+    "3261",
+    "7970",
+    "7970#2.1",
+    "9110",
+    "4293"
+   ]
+  },
+  {
+   "id": "ip-subnet-address-mask",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3775",
+    "2626",
+    "1812",
+    "1716",
+    "6275",
+    "1000",
+    "4949",
+    "2328",
+    "1122",
+    "2178"
+   ]
+  },
+  {
+   "id": "mail-mx-record-routing",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 4,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": 3,
+   "top": [
+    "9989",
+    "3731",
+    "2821",
+    "5321",
+    "4931",
+    "5731",
+    "7489",
+    "1479",
+    "1000",
+    "1123"
+   ]
+  },
+  {
+   "id": "multicast-class-d-host-groups",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1812",
+    "1716",
+    "1716#1.4",
+    "6275",
+    "3775",
+    "5944",
+    "3344",
+    "1584",
+    "1768",
+    "3220"
+   ]
+  },
+  {
+   "id": "nntp-ihave-article-offer",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 5,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "3977",
+    "3010",
+    "8656",
+    "7826",
+    "6120",
+    "8415"
+   ]
+  },
+  {
+   "id": "rarp-diskless-workstation-address",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "6275",
+    "3775",
+    "1812",
+    "1716",
+    "1716#1.4",
+    "3344",
+    "5944",
+    "3220",
+    "1970",
+    "1195"
+   ]
+  },
+  {
+   "id": "security-arpanet-guessable-passwords-1973",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9635",
+    "5324#3.2",
+    "5324#3.4.1",
+    "8881",
+    "8299",
+    "8049",
+    "5851",
+    "3591#2.2",
+    "3591#2.3",
+    "5661"
+   ]
+  },
+  {
+   "id": "tcp-1974-well-known-sockets",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "4949",
+    "8506",
+    "4006",
+    "2626",
+    "1700",
+    "2828",
+    "3292",
+    "2297",
+    "1000",
+    "1689"
+   ]
+  },
+  {
+   "id": "tcp-default-mss-576",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 1,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": true,
+    "8000": true
+   },
+   "avoid_rank": null,
+   "top": [
+    "9293",
+    "1700",
+    "7609",
+    "8415",
+    "9915",
+    "5925",
+    "761#3",
+    "7574",
+    "793#3",
+    "5044"
+   ]
+  },
+  {
+   "id": "tcp-nagle-small-packet-problem",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 2,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1700",
+    "9293",
+    "2178",
+    "2328",
+    "1000",
+    "9543",
+    "1583",
+    "1470",
+    "1504",
+    "5925"
+   ]
+  },
+  {
+   "id": "tcp-silly-window-syndrome-origin",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1013",
+    "4340",
+    "8881",
+    "8881#1.2",
+    "8881#1.9",
+    "4911#5",
+    "4911#22",
+    "4911#24",
+    "5661",
+    "5661#1.1"
+   ]
+  },
+  {
+   "id": "tcp-three-way-handshake",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": 3,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": true
+   },
+   "avoid_rank": 13,
+   "top": [
+    "9000",
+    "8881",
+    "9293",
+    "5661",
+    "1700",
+    "7143",
+    "3720",
+    "5925",
+    "793#2",
+    "793#3"
+   ]
+  },
+  {
+   "id": "telnet-1972-ad-hoc-protocol",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "1000",
+    "1700",
+    "5000",
+    "2896",
+    "2626#2",
+    "2626#3.4",
+    "3530",
+    "1340",
+    "8881",
+    "5661"
+   ]
+  },
+  {
+   "id": "telnet-binary-transmission",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7143",
+    "4949#2.2",
+    "4949#3.2",
+    "4949#3.5",
+    "3720",
+    "9260",
+    "6386",
+    "4960"
+   ]
+  },
+  {
+   "id": "telnet-echo-option",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8415",
+    "9915",
+    "3315",
+    "4728",
+    "4340",
+    "9243",
+    "6275",
+    "3775",
+    "7252",
+    "3261"
+   ]
+  },
+  {
+   "id": "telnet-option-code-assignment",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8415",
+    "9915",
+    "4728",
+    "3315",
+    "8881",
+    "8881#1.1",
+    "5661",
+    "5661#1.1",
+    "1700",
+    "6275"
+   ]
+  },
+  {
+   "id": "telnet-randomly-lose-option",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "8415",
+    "9915",
+    "7826",
+    "3010",
+    "4740",
+    "3315"
+   ]
+  },
+  {
+   "id": "telnet-suppress-go-ahead",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881#1.1",
+    "9000",
+    "3435",
+    "5661#1.1",
+    "5661#1.6",
+    "5661#2.3",
+    "1000",
+    "1123",
+    "2178",
+    "2328"
+   ]
+  },
+  {
+   "id": "telnet-terminal-type-send-request",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "8881",
+    "5661",
+    "4912",
+    "4912#1",
+    "7826",
+    "9110",
+    "8415",
+    "9635",
+    "5102"
+   ]
+  },
+  {
+   "id": "telnet-timing-mark",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "7143",
+    "8881",
+    "3720",
+    "5661",
+    "9000",
+    "4949#2.2",
+    "4949#3.2",
+    "4949#3.5",
+    "4340",
+    "9260"
+   ]
+  },
+  {
+   "id": "tftp-packet-opcodes",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "9000",
+    "9580",
+    "4728",
+    "7401",
+    "3095",
+    "4340",
+    "2178",
+    "2328",
+    "3550",
+    "1504"
+   ]
+  },
+  {
+   "id": "time-protocol-epoch-1900",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "3292",
+    "5661",
+    "8506",
+    "4006",
+    "7826",
+    "2297",
+    "2165",
+    "2626",
+    "2626#1"
+   ]
+  },
+  {
+   "id": "udp-checksum-pseudo-header",
+   "stratum": "old-numbering",
+   "split": "dev",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "3261",
+    "1716",
+    "1716#1.4",
+    "1812",
+    "1700",
+    "7826",
+    "3095",
+    "4728",
+    "9788",
+    "6275"
+   ]
+  },
+  {
+   "id": "whois-nicname-query",
+   "stratum": "old-numbering",
+   "split": "test",
+   "section_rank": null,
+   "document_rank": null,
+   "section_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "document_budget": {
+    "2000": false,
+    "8000": false
+   },
+   "avoid_rank": null,
+   "top": [
+    "8881",
+    "5661",
+    "7530",
+    "3530",
+    "3010",
+    "7826",
+    "6120",
+    "1012",
+    "8415",
+    "9915"
+   ]
+  }
+ ]
+}

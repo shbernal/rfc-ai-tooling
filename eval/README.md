@@ -30,8 +30,11 @@ it. Search changes are measured against this set.
 | `check_gold.py` | resolves every item against a local mirror; exits non-zero on any problem |
 | `overlap.py` | per-item lexical overlap between the query and its gold text |
 | `review.py` | walks unvalidated items one at a time, for the validation pass |
+| `score.py` | ranks a retrieval system against the items; see `docs/search-evaluation.md` |
+| `systems/` | the systems `score.py` can rank, one module each |
+| `results/` | each system's last committed score, per item and per stratum |
 
-All three scripts are stdlib-only and read the corpus through `core/rfc.py`,
+The scripts are stdlib-only and read the corpus through `core/rfc.py`,
 so they need a synced mirror (`python3 core/rfc.py sync`).
 
 ## Item schema

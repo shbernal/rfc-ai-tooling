@@ -31,8 +31,9 @@ follow_imports = "silent"
 [tool.pytest.ini_options]
 # core/ tests the implementation; mcp/tests tests the adapter around it. The
 # adapter's tests need the mcp SDK, which is why it is a dev dependency below
-# and why CI installs it rather than running with --no-project.
-testpaths = ["core", "mcp/tests"]
+# and why CI installs it rather than running with --no-project. eval/ tests the
+# retrieval scorer's metrics on hand-made rankings, without a mirror.
+testpaths = ["core", "mcp/tests", "eval"]
 pythonpath = ["mcp/src"]
 python_files = "test_*.py"
 markers = [

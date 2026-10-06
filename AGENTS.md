@@ -37,7 +37,11 @@ make format        # ruff format .
 make check-vendor  # verify vendored copies match core/rfc.py
 make smoke-local   # stdio JSON-RPC session against the *working tree*
 make smoke         # the same session against the *published* PyPI server
+make eval SYSTEM=rg  # score a retrieval system against eval/items.jsonl; needs a mirror
 ```
+
+`make eval` writes `eval/results/<system>.json`; commit it with any change that
+moves the numbers. Method and metrics are in `docs/search-evaluation.md`.
 
 Run `make sync-core lint typecheck test` before committing any change to
 `core/rfc.py`.
@@ -80,6 +84,9 @@ rather than reading a PASS as done.
 - Tests live in `core/test_rfc.py` and run against fixtures in
   `core/fixtures/`, not live network calls. Tests marked `network` hit the
   real RFC Editor and are excluded from CI (`-m 'not network'`).
+- `eval/test_score.py` tests the retrieval scorer's metrics on hand-made
+  rankings. Scoring a real system needs a mirror, so it is `make eval`, not
+  part of `make test`.
 - `mcp/tests/test_server.py` covers the adapter rather than the core, because
   the two fail differently: the core is a library the CLI calls once per
   process, while the server is long-lived and calls it repeatedly, so anything

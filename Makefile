@@ -11,7 +11,7 @@ VERSION := $(shell grep -m1 '^version = ' mcp/pyproject.toml | cut -d'"' -f2)
 # use an environment you manage yourself: `make test RUN=` in an active venv.
 RUN ?= uv run
 
-.PHONY: sync-core check-vendor test coverage lint typecheck format smoke smoke-local print-version
+.PHONY: sync-core check-vendor test coverage lint typecheck format smoke smoke-local print-version eval
 
 # For the container recipe in AGENTS.md, which needs the version on a command
 # line built outside this Makefile.
@@ -94,3 +94,11 @@ typecheck:
 
 format:
 	$(RUN) ruff format .
+
+# Score a retrieval system (a module in eval/systems/) against eval/items.jsonl
+# and write eval/results/$(SYSTEM).json. Needs a synced mirror, not the
+# network, and is stdlib-only, so it stays on the bare interpreter.
+SYSTEM ?= rg
+SPLIT ?= test
+eval:
+	python3 eval/score.py --system $(SYSTEM) --split $(SPLIT)
