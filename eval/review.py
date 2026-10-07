@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Walk the unvalidated items one at a time and record a verdict on each.
+"""Walk the items the author has not validated and record a verdict on each.
+
+Items a model reviewed are included, so the author's reading can replace the
+model's.
 
 Shows the query beside the text of every gold section, then asks:
 
-    a  accept — stamps validated_on with today's date
+    a  accept — stamps validated_on with today's date and validated_by "author"
     e  edit the item in $EDITOR (add an acceptable section, sharpen the query),
        then show it again
     r  reject — removes the item from the file
@@ -11,7 +14,7 @@ Shows the query beside the text of every gold section, then asks:
     q  quit
 
 The file is rewritten after every verdict, so quitting loses nothing and the
-next run resumes at the first item still unvalidated.
+next run resumes at the first item the author has not validated.
 
     python3 eval/review.py [--mirror PATH] [--items PATH] [--stratum NAME]
 """
@@ -106,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
     pending = [
         item["id"]
         for item in items
-        if item["validated_on"] is None and args.stratum in (None, item["stratum"])
+        if item["validated_by"] != "author" and args.stratum in (None, item["stratum"])
     ]
     print(f"{len(pending)} item(s) to review")
 
@@ -119,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
             choice = input(prompt).strip().lower()
             if choice == "a":
                 items[index]["validated_on"] = datetime.date.today().isoformat()
+                items[index]["validated_by"] = "author"
             elif choice == "r":
                 del items[index]
             elif choice == "e":

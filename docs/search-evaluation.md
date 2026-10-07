@@ -66,25 +66,24 @@ and stopwords, then match the remaining terms with OR.
   Each of the three lines the CLI quotes per document is mapped to the deepest
   section that contains it.
 
-Test split, 152 items. The items were not validated when this was scored, so
-the gold is a draft and these figures will move once it is reviewed.
+Test split, 152 items, scored against the model-reviewed gold.
 
 | | system | sec@1 | sec@10 | MRR@10 | doc@1 | doc@10 | sec 8k | doc 8k |
 |---|---|---|---|---|---|---|---|---|
-| overall | title | 0.03 | 0.06 | 0.04 | 0.11 | 0.23 | 0.03 | 0.08 |
-| | rg | 0.00 | 0.00 | 0.00 | 0.05 | 0.29 | 0.00 | 0.11 |
+| overall | title | 0.03 | 0.06 | 0.04 | 0.11 | 0.24 | 0.03 | 0.08 |
+| | rg | 0.00 | 0.00 | 0.00 | 0.05 | 0.28 | 0.00 | 0.10 |
 | exact-term | title | 0.00 | 0.00 | 0.00 | 0.07 | 0.10 | 0.00 | 0.03 |
 | | rg | 0.00 | 0.00 | 0.00 | 0.10 | 0.52 | 0.00 | 0.21 |
 | paraphrase | title | 0.00 | 0.00 | 0.00 | 0.00 | 0.05 | 0.00 | 0.00 |
 | | rg | 0.00 | 0.00 | 0.00 | 0.03 | 0.15 | 0.00 | 0.05 |
 | obsolescence | title | 0.00 | 0.00 | 0.00 | 0.03 | 0.10 | 0.00 | 0.00 |
-| | rg | 0.00 | 0.00 | 0.00 | 0.00 | 0.31 | 0.00 | 0.00 |
-| multi-doc | title | 0.00 | 0.00 | 0.00 | 0.15 | 0.41 | 0.00 | 0.15 |
-| | rg | 0.00 | 0.00 | 0.00 | 0.11 | 0.33 | 0.00 | 0.22 |
-| old-numbering | title | 0.15 | 0.33 | 0.20 | 0.37 | 0.59 | 0.19 | 0.26 |
-| | rg | 0.00 | 0.00 | 0.00 | 0.04 | 0.19 | 0.00 | 0.07 |
+| | rg | 0.00 | 0.00 | 0.00 | 0.00 | 0.28 | 0.00 | 0.00 |
+| multi-doc | title | 0.00 | 0.00 | 0.00 | 0.15 | 0.44 | 0.00 | 0.15 |
+| | rg | 0.00 | 0.00 | 0.00 | 0.11 | 0.30 | 0.00 | 0.22 |
+| old-numbering | title | 0.15 | 0.33 | 0.20 | 0.33 | 0.59 | 0.19 | 0.26 |
+| | rg | 0.00 | 0.00 | 0.00 | 0.00 | 0.19 | 0.00 | 0.04 |
 
-Current-first on the obsolescence stratum: title 0.10, rg 0.24.
+Current-first on the obsolescence stratum: title 0.10, rg 0.21.
 
 ## What the baselines show
 
@@ -94,15 +93,15 @@ Current-first on the obsolescence stratum: title 0.10, rg 0.24.
   section that answers. Title search's section figures come only from
   old-numbering items whose gold is a whole document.
 - **`rg` ranks long documents, not relevant ones.** Ranking by matching-line
-  count rewards size. RFC 8881 (NFSv4.1) ranks first for 46 of the 226
+  count rewards size. RFC 8881 (NFSv4.1) ranks first for 45 of the 226
   questions, and RFC 5661, the NFSv4.1 text it replaced, is in the top 5 for
-  97. It finds the right document in its top 10 for half the exact-term items,
+  95. It finds the right document in its top 10 for half the exact-term items,
   but rarely at rank 1.
-- **Paraphrase is the weakest stratum for both**, as expected for lexical matching on
-  questions written to avoid the spec's wording.
+- **Paraphrase is the weakest stratum for both**, as expected for lexical
+  matching on questions written to avoid the spec's wording.
 - **Obsoleted RFCs do not crowd out current ones.** avoid@5 is low for both
   (0.07 and 0.03). That is mostly because the gold is rarely near the top
-  either; current-first stays at 0.24 or below.
+  either; current-first stays at 0.21 or below.
 - **Most of the text read goes to waste.** At 8k tokens, document-level budget
   recall is about a third of document recall@10. When the right RFC comes
   back, it comes back as more text than the budget allows.

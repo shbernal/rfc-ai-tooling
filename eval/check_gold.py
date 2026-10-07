@@ -36,9 +36,11 @@ FIELDS = {
     "avoid",
     "source",
     "validated_on",
+    "validated_by",
     "canary",
 }
 SOURCES = {"llm-drafted", "hand-written"}
+VALIDATORS = {"author", "model"}
 KEBAB = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 DOT_LEADER = re.compile(r"\.{4,}\s*\d+\s*$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -107,12 +109,17 @@ def check_item(item: dict, corpus: Corpus, allow_unvalidated: bool) -> list[str]
         problems.append(f"unknown source {item['source']!r}")
     if item["canary"] != CANARY:
         problems.append("canary missing or altered")
-    validated = item["validated_on"]
+    validated, validator = item["validated_on"], item["validated_by"]
     if validated is None:
         if not allow_unvalidated:
             problems.append("not validated")
-    elif not DATE.match(str(validated)):
-        problems.append(f"validated_on {validated!r} is not YYYY-MM-DD")
+        if validator is not None:
+            problems.append("validated_by set on an unvalidated item")
+    else:
+        if not DATE.match(str(validated)):
+            problems.append(f"validated_on {validated!r} is not YYYY-MM-DD")
+        if validator not in VALIDATORS:
+            problems.append(f"validated_by {validator!r} is not one of {sorted(VALIDATORS)}")
 
     gold = item["gold"]
     if not gold:
