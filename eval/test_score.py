@@ -138,4 +138,9 @@ def test_report_keeps_the_obsolescence_stratum_apart_from_currency():
 
 def test_terms_drops_question_words_and_repeats():
     assert terms("How does a cache cache a stored response?") == ["cache", "stored", "response"]
-    assert terms("BGP LOCAL_PREF") == ["bgp", "local", "pref"]
+    # An identifier stays whole, the way the spec writes it.
+    assert terms("BGP LOCAL_PREF") == ["bgp", "local_pref"]
+
+
+def test_a_query_of_only_stopwords_keeps_them():
+    assert terms("to be or not to be") == ["to", "be", "or", "not"]

@@ -8,8 +8,13 @@ document of each generation is marked `network` and excluded from CI.
 
 from __future__ import annotations
 
+import contextlib
+import gzip
+import hashlib
+import json
 import os
 import shutil
+import sqlite3
 import sys
 import threading
 import time
@@ -1386,6 +1391,331 @@ def test_a_section_read_walks_the_document_for_furniture_only_once(tmp_path, mon
     payload = rfc.read_payload(tmp_path, 4242, section="1", hints=HINTS)
     assert "Purpose prose" in payload["content"]
     assert len(calls) == 1
+
+
+# --------------------------------------------------------------------------
+# Section index
+# --------------------------------------------------------------------------
+
+# Two documents that differ only in where a word sits: rfc1000 puts it in a
+# heading, rfc3000 in the body of an unrelated section. Same counts either way,
+# so the order between them is the heading weight and nothing else.
+HEADED = """Front matter about nothing in particular.
+
+1.  Introduction
+
+   Opening words.
+
+2.  Widget Handling
+
+   How a widget is handled.
+"""
+BURIED = """Front matter about nothing in particular.
+
+1.  Introduction
+
+   Opening words.
+
+2.  Other Matters
+
+   How a widget is handled.
+"""
+
+
+@pytest.fixture
+def built(tmp_path) -> Path:
+    """A synced mirror with its section index built.
+
+    2616 and 9110 carry the same text, and the index excerpt says the first
+    is obsoleted, so any order between them is the obsolete weight's doing.
+    """
+    paginated = (FIXTURES / "paginated.txt").read_text(encoding="utf-8")
+    (tmp_path / "rfc2616.txt").write_text(paginated, encoding="utf-8")
+    (tmp_path / "rfc9110.txt").write_text(paginated, encoding="utf-8")
+    (tmp_path / "rfc9998.txt").write_text(
+        (FIXTURES / "modern.txt").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    (tmp_path / "rfc1000.txt").write_text(HEADED, encoding="utf-8")
+    (tmp_path / "rfc3000.txt").write_text(BURIED, encoding="utf-8")
+    rfc.index_path(tmp_path).write_text(INDEX_EXCERPT, encoding="utf-8")
+    (tmp_path / rfc.SYNC_STAMP).touch()
+    rfc.build_section_index(tmp_path, rfc.section_index_path(tmp_path))
+    return tmp_path
+
+
+def _drop_mirror(mirror: Path) -> None:
+    """Leave only the section index, as `sync --index` would."""
+    for path in mirror.glob("rfc[0-9]*.txt"):
+        path.unlink()
+    (mirror / rfc.SYNC_STAMP).unlink()
+
+
+@contextlib.contextmanager
+def _index(mirror: Path):
+    conn = rfc.open_section_index(rfc.section_index_path(mirror))
+    assert conn is not None
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
+def test_index_rows_are_the_sections_the_parser_finds(built):
+    """One segmentation: a hit names exactly what `sections` lists."""
+    with _index(built) as conn:
+        for number in (2616, 9998, 1000):
+            lines = rfc.split_lines((built / f"rfc{number}.txt").read_text(encoding="utf-8"))
+            expected = [s["section"] for s in rfc.find_sections(lines)]
+            rows = conn.execute(
+                "SELECT section FROM sections WHERE number = ? AND section IS NOT NULL "
+                "ORDER BY line",
+                (number,),
+            ).fetchall()
+            assert [r[0] for r in rows] == expected
+
+
+def test_index_metadata_describes_the_build(built):
+    with _index(built) as conn:
+        info = rfc.section_index_info(conn)
+    assert info["schema"] == str(rfc.SECTION_INDEX_SCHEMA)
+    assert info["documents"] == "5"
+    assert info["highest_rfc"] == "9998"
+    assert info["tokenizer"] == rfc.DEFAULT_TOKENIZER
+    assert info["built"] and info["rfc_index"]
+
+
+def test_a_search_hit_resolves_to_its_section(built):
+    with _index(built) as conn:
+        results, total = rfc.search_sections(conn, "purpose prose", limit=10)
+    assert total >= 3
+    top = results[0]
+    assert top["section"] == "1.1"
+    lines = rfc.split_lines((built / f"rfc{top['number']}.txt").read_text(encoding="utf-8"))
+    first, last, _ = rfc.section_range(rfc.find_sections(lines), "1.1", len(lines))
+    assert (top["line"], top["end_line"]) == (first, last)
+    assert "Purpose prose" in top["snippet"]["text"]
+
+
+def test_a_word_in_a_heading_outranks_the_same_word_in_a_body(built):
+    with _index(built) as conn:
+        results, _ = rfc.search_sections(conn, "widget", limit=10)
+    assert [(r["number"], r["section"]) for r in results[:2]] == [(1000, "2"), (3000, "2")]
+    with _index(built) as conn:
+        flat, _ = rfc.search_sections(conn, "widget", limit=10, heading_weight=1.0)
+    assert flat[0]["score"] < results[0]["score"]
+
+
+def test_the_obsolete_weight_ranks_a_replacement_first(built):
+    with _index(built) as conn:
+        demoted, _ = rfc.search_sections(conn, "body prose", limit=10, obsolete_weight=0.5)
+    order = [r["number"] for r in demoted if r["section"] == "2"]
+    assert order.index(9110) < order.index(2616)
+
+
+def test_the_front_matter_is_searchable_under_the_rfc_title(built):
+    with _index(built) as conn:
+        results, _ = rfc.search_sections(conn, "hypertext", limit=10)
+    assert results[0]["number"] == 2616
+    assert results[0]["section"] is None
+    assert results[0]["heading"] == "Hypertext Transfer Protocol -- HTTP/1.1"
+
+
+def test_a_query_with_no_words_is_refused(built):
+    with _index(built) as conn, pytest.raises(rfc.RFCError, match="no words"):
+        rfc.search_sections(conn, "?! --", limit=10)
+
+
+def test_a_query_of_fts_syntax_is_searched_as_words(built):
+    """Each term is quoted, so NEAR, OR and a stray quote are words, not syntax."""
+    with _index(built) as conn:
+        results, _ = rfc.search_sections(conn, 'widget" OR NEAR(', limit=10)
+    assert results[0]["number"] == 1000
+
+
+def test_query_terms_drop_stopwords_but_not_a_query_made_of_them():
+    assert rfc.query_terms("What is the Retry-After header?") == ["retry", "after", "header"]
+    assert rfc.query_terms("when is If-None-Match sent") == ["if", "none", "match", "sent"]
+    assert rfc.query_terms("to be or not to be") == ["to", "be", "or", "not"]
+    assert len(rfc.query_terms(" ".join(f"w{i}" for i in range(100)))) == rfc.MAX_QUERY_TERMS
+
+
+def test_missing_fts5_is_named_rather_than_raised_raw():
+    class NoFts5:
+        def execute(self, *args):
+            raise sqlite3.OperationalError("no such module: fts5")
+
+    with pytest.raises(rfc.RFCError, match="FTS5"):
+        rfc.search_sections(NoFts5(), "widget", limit=5)  # type: ignore[arg-type]
+
+
+def test_another_fts5_error_is_not_reported_as_a_missing_fts5():
+    """Every FTS5 error starts "fts5:"; only the missing module is that."""
+
+    class BadQuery:
+        def execute(self, *args):
+            raise sqlite3.OperationalError('fts5: syntax error near ""')
+
+    with pytest.raises(sqlite3.OperationalError, match="syntax"):
+        rfc.search_sections(BadQuery(), "widget", limit=5)  # type: ignore[arg-type]
+
+
+def test_an_identifier_with_an_underscore_matches_its_parts(built):
+    """unicode61 splits on "_", so the index holds LOCAL and PREF; a quoted
+    "local_pref" would be a phrase, which a detail=column index refuses."""
+    (built / "rfc4000.txt").write_text("1.  Attributes\n\n   LOCAL_PREF is local.\n")
+    rfc.build_section_index(built, rfc.section_index_path(built))
+    with _index(built) as conn:
+        results, _ = rfc.search_sections(conn, "LOCAL_PREF", limit=5)
+    assert results[0]["number"] == 4000
+
+
+def test_reads_from_the_index_match_reads_from_the_mirror(built):
+    before = rfc.read_payload(built, 2616, section="1", hints=HINTS)
+    _drop_mirror(built)
+    assert not rfc.document_path(built, 2616).exists()
+    after = rfc.read_payload(built, 2616, section="1", hints=HINTS)
+    assert after["content"] == before["content"]
+    assert (after["start_line"], after["end_line"]) == (before["start_line"], before["end_line"])
+
+
+def test_an_index_alone_reads_without_the_network(built, monkeypatch):
+    _drop_mirror(built)
+
+    def no_network(url, **kwargs):
+        raise AssertionError(f"fetched {url}")
+
+    monkeypatch.setattr(rfc, "_fetch", no_network)
+    assert "Purpose prose" in rfc.read_document(built, 9998)
+
+
+def test_an_index_alone_answers_a_fulltext_search(built):
+    _drop_mirror(built)
+    assert not rfc.is_populated(built)
+    payload = rfc.search_payload(
+        built, "widget", scope="fulltext", limit=5, unavailable_message="unused"
+    )
+    assert payload["tool"] == "index"
+    assert payload["results"][0]["section"] == "2"
+    assert payload["results"][0]["header"].startswith("RFC 1000")
+    assert "note" not in payload
+
+
+def test_a_regex_needs_the_mirror_even_with_an_index(built):
+    _drop_mirror(built)
+    with pytest.raises(rfc.RFCError, match="regex"):
+        rfc.search_payload(
+            built, "wid.et", scope="fulltext", limit=5, regex=True, unavailable_message="unused"
+        )
+
+
+def test_an_index_of_another_format_is_refused_by_name(built):
+    path = rfc.section_index_path(built)
+    conn = sqlite3.connect(path)
+    conn.execute("UPDATE meta SET value = '0' WHERE key = 'schema'")
+    conn.commit()
+    conn.close()
+    with pytest.raises(rfc.RFCError, match="sync --index"):
+        rfc.open_section_index(path)
+
+
+def test_an_unusable_index_falls_back_to_the_mirror_and_says_so(built):
+    path = rfc.section_index_path(built)
+    path.write_bytes(b"not a database")
+    payload = rfc.search_payload(
+        built, "widget", scope="fulltext", limit=5, unavailable_message="unused"
+    )
+    assert payload["tool"] in {"rg", "grep"}
+    assert "section index" in payload["note"]
+    # The mirror's answer names sections too.
+    assert payload["results"][0]["matches"][0]["section"] == "2"
+
+
+def test_status_reports_the_section_index(built, monkeypatch, capsys):
+    _drop_mirror(built)
+    monkeypatch.setenv("RFC_MIRROR", str(built))
+    assert rfc.main(["status", "--json"]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["fulltext_available"] is True
+    assert status["section_index"]["usable"] is True
+    assert status["section_index"]["documents"] == "5"
+
+
+def test_the_human_output_names_the_section(built, monkeypatch, capsys):
+    monkeypatch.setenv("RFC_MIRROR", str(built))
+    assert rfc.main(["search", "widget", "--fulltext"]) == 0
+    out = capsys.readouterr().out
+    assert "§2 Widget Handling" in out
+    assert "How a widget is handled." in out
+
+
+def test_a_build_needs_a_synced_mirror(tmp_path):
+    with pytest.raises(rfc.RFCError, match="sync"):
+        rfc.build_section_index(tmp_path, tmp_path / "out.db")
+
+
+def _publish(monkeypatch, artifact: Path, checksum: str) -> None:
+    """Stand in for GitHub: one index release whose asset is `artifact`."""
+    listing = [
+        {"tag_name": "v9.9.9", "assets": []},
+        {
+            "tag_name": "index-2026-10-07",
+            "assets": [
+                {"name": rfc.INDEX_ASSET, "browser_download_url": "asset", "size": 1},
+                {"name": f"{rfc.INDEX_ASSET}.sha256", "browser_download_url": "sum"},
+            ],
+        },
+    ]
+
+    def fake_fetch(url, **kwargs):
+        if url == rfc.INDEX_RELEASES_URL:
+            return json.dumps(listing).encode(), None
+        assert url == "sum"
+        return f"{checksum}  {rfc.INDEX_ASSET}\n".encode(), None
+
+    def fake_download(url, dest):
+        assert url == "asset"
+        data = artifact.read_bytes()
+        dest.write_bytes(data)
+        return hashlib.sha256(data).hexdigest()
+
+    monkeypatch.setattr(rfc, "_fetch", fake_fetch)
+    monkeypatch.setattr(rfc, "_download", fake_download)
+
+
+def test_sync_index_installs_a_verified_download(built, tmp_path_factory, monkeypatch):
+    artifact = tmp_path_factory.mktemp("release") / rfc.INDEX_ASSET
+    artifact.write_bytes(gzip.compress(rfc.section_index_path(built).read_bytes()))
+    target = tmp_path_factory.mktemp("fresh")
+    _publish(monkeypatch, artifact, hashlib.sha256(artifact.read_bytes()).hexdigest())
+    assert rfc.run_index_download(target, assume_yes=True) == 0
+    with _index(target) as conn:
+        assert rfc.section_index_info(conn)["documents"] == "5"
+    assert list(target.glob("*.part")) == []
+
+
+def test_a_download_that_fails_its_checksum_leaves_the_old_index(
+    built, tmp_path_factory, monkeypatch
+):
+    artifact = tmp_path_factory.mktemp("release") / rfc.INDEX_ASSET
+    artifact.write_bytes(gzip.compress(b"tampered"))
+    before = rfc.section_index_path(built).read_bytes()
+    _publish(monkeypatch, artifact, "0" * 64)
+    with pytest.raises(rfc.RFCError, match="SHA-256"):
+        rfc.run_index_download(built, assume_yes=True)
+    assert rfc.section_index_path(built).read_bytes() == before
+    assert list(built.glob("*.part")) == []
+
+
+def test_a_verified_download_of_an_unreadable_index_is_not_installed(
+    built, tmp_path_factory, monkeypatch
+):
+    artifact = tmp_path_factory.mktemp("release") / rfc.INDEX_ASSET
+    artifact.write_bytes(gzip.compress(b"not a database"))
+    before = rfc.section_index_path(built).read_bytes()
+    _publish(monkeypatch, artifact, hashlib.sha256(artifact.read_bytes()).hexdigest())
+    with pytest.raises(rfc.RFCError, match="not a readable section index"):
+        rfc.run_index_download(built, assume_yes=True)
+    assert rfc.section_index_path(built).read_bytes() == before
 
 
 # --------------------------------------------------------------------------

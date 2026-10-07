@@ -76,7 +76,7 @@ This project replaces [`mcp-server-ietf`](https://github.com/tizee/mcp-server-ie
 | Full titles | Yes | Cut at the first period, so RFC 2616 is "HTTP/1" | Yes |
 | Newly published RFCs | Index refreshes | Index downloaded once | Yes |
 | Read one section | By number or heading | Line ranges only | Whole document |
-| Full-text search | With a local mirror | Titles only | No |
+| Full-text search | Ranked by section, with a downloaded index | Titles only | No |
 | Install | One config line, or none for the skill | Clone and `pip install` | Nothing |
 
 ## Pick a surface
@@ -151,7 +151,7 @@ docker build -t mcp-server-rfc mcp/ && docker run --rm -p 8080:8080 mcp-server-r
 Then add `https://<your-app>/mcp` as a custom connector in claude.ai, which needs a Pro, Max, Team or Enterprise plan.
 
 - **There's no authentication.** A public instance is an open proxy in front of a volunteer-run mirror, so put it behind auth or keep the URL private.
-- **Full-text search doesn't work hosted.** It needs the 512 MB corpus on local disk, so it returns an error. Everything else needs only the 2 MB index.
+- **Full-text search needs the section index on the server.** Run `sync --index` there, or it returns an error. Everything else needs only the 2 MB RFC index.
 
 </details>
 
@@ -171,34 +171,56 @@ The agent runs the same loop you can run yourself: search, check obsolescence, l
 ## Full-text search
 
 Title search works with no setup.
-To search the text of every RFC, sync a local mirror once.
+To search the text of every RFC, download the section index once.
 
 For the skill, where `<skills-dir>` is where it was installed, like `~/.claude/skills`:
 
 ```bash
-python3 <skills-dir>/rfc-lookup/scripts/rfc.py sync
+python3 <skills-dir>/rfc-lookup/scripts/rfc.py sync --index
 ```
 
 For the MCP server:
 
 ```bash
+uvx mcp-server-rfc sync --index
+```
+
+Both write to the same directory, so one download serves both.
+
+The index is a SQLite file holding every RFC, compressed, and an FTS5 index over each section.
+A search returns sections ranked by BM25, with the number to read next:
+
+```
+$ rfc search "how long can a cache serve a stale response" --fulltext
+RFC 9111 — HTTP Caching  [INTERNET STANDARD]
+   §4.2.4 Serving Stale Responses  (line 784, 17 lines)
+   790: A cache MUST NOT generate a stale response if it is prohibited by an
+```
+
+Reads come from the index too, so nothing is fetched from the RFC Editor after that.
+On the [retrieval eval](docs/search-evaluation.md) it finds the answering section in its top 10 for more than half of the held-out questions; ripgrep over the corpus finds it for none.
+
+Without the index, `--fulltext` falls back to `rg` or `grep` over a synced mirror of the corpus as plain files, which is also what `--regex` needs:
+
+```bash
 uvx mcp-server-rfc sync
 ```
 
-Both write to the same directory, so one sync serves both.
+| | Download | On disk | Source |
+| --- | --- | --- | --- |
+| `sync --index` | About 270 MB | 360 MB | This project's GitHub releases, checked against a published SHA-256 |
+| `sync` | 512 MB, about 5 minutes | 512 MB | The RFC Editor's public rsync mirror, capped at 2 MB/s by default (`--bwlimit`) |
 
-| Disk | Time | Source |
-| --- | --- | --- |
-| 512 MB, text only | About 5 minutes on a fast connection | The RFC Editor's public rsync mirror |
-
-Sync never starts on its own, and the skill tells agents not to run it unasked.
-It caps bandwidth at 2 MB/s by default, and `--bwlimit` changes that.
+Neither starts on its own, and the skill tells agents not to run them unasked.
+`rfc index build` makes the index from a synced mirror, in about two and a half minutes.
 
 ## How it works
 
 ```mermaid
 flowchart LR
     editor[("RFC Editor")]
+    releases[("GitHub releases")]
+    index[("Section index<br/>360 MB, optional")]
     mirror[("Local mirror<br/>512 MB, optional")]
     core["core/rfc.py<br/>stdlib only"]
     skill["Skill<br/>scripts/rfc.py"]
@@ -208,6 +230,8 @@ flowchart LR
 
     editor -- "HTTPS, on demand" --> core
     editor -. "rsync, when you run sync" .-> mirror
+    releases -. "when you run sync --index" .-> index
+    index --> core
     mirror --> core
     core -- "vendored copy" --> skill
     core -- "vendored copy" --> mcp
@@ -218,7 +242,8 @@ flowchart LR
 `core/rfc.py` is the only implementation.
 The skill and the MCP server each carry an identical copy, and CI fails if one drifts.
 The core parses the RFC Editor's index for titles, status and what obsoletes what, then fetches documents over HTTPS and caches them.
-With a synced mirror, it reads from disk and searches with `rg` or `grep`.
+With the section index, it reads from that file and ranks sections with SQLite's FTS5.
+With only a synced mirror, it reads from disk and searches with `rg` or `grep`.
 
 ## More
 

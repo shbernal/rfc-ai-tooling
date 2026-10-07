@@ -42,13 +42,5 @@ def retrieve(query: str, k: int) -> list[Hit]:
             if key in seen:
                 continue
             seen.add(key)
-            if section is None:
-                first = _corpus.sections(number)
-                end = first[0]["line"] - 1 if first else len(_corpus.lines(number))
-                hits.append(Hit(number, None, _corpus.text(number, 1, end)))
-            else:
-                end = section["line"] + section["lines"] - 1
-                hits.append(
-                    Hit(number, section["section"], _corpus.text(number, section["line"], end))
-                )
+            hits.append(Hit(number, key[1], _corpus.section_text(number, key[1])))
     return hits[:k]

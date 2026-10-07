@@ -63,7 +63,10 @@ jobs:
 
   publish-skill:
     needs: verify
-    if: github.event_name == 'release'
+    # Only a software release. Section index builds are releases too, tagged
+    # index-YYYY-MM-DD, and one created by hand would otherwise publish the
+    # skill under that tag as its version.
+    if: github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v')
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -84,7 +87,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          prev_tag=$(git tag --sort=-creatordate | grep -vFx "$RELEASE_TAG" | head -1)
+          prev_tag=$(git tag --sort=-creatordate | grep '^v' | grep -vFx "$RELEASE_TAG" | head -1)
           if [ -z "$prev_tag" ] || ! git diff --quiet "$prev_tag" HEAD -- skill/; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else

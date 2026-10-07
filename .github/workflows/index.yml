@@ -1,0 +1,67 @@
+name: index
+
+# Builds the section index from a fresh mirror and publishes it as a release
+# tagged index-YYYY-MM-DD, which is what `rfc sync --index` downloads. Run by
+# hand for now; a schedule comes later.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      # Creating the release and uploading its assets.
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      # Every later step reads the mirror from here. Set in a step because the
+      # runner context is not available to a job's env.
+      - run: echo "RFC_MIRROR=$RUNNER_TEMP/mirror" >> "$GITHUB_ENV"
+
+      # The core is stdlib-only and so is everything below, so no environment
+      # is set up beyond the runner's own Python. Its SQLite has FTS5.
+      - name: Sync the corpus
+        run: python3 core/rfc.py sync --yes
+
+      - name: Build the section index
+        run: python3 core/rfc.py index build
+
+      # The eval resolves its gold against the same mirror the index was built
+      # from, so a gold section the parser no longer finds fails the build
+      # before an index that cannot answer it is published.
+      - name: Check the eval gold
+        run: python3 eval/check_gold.py
+
+      - name: Score the index
+        run: python3 eval/score.py --system bm25 --split test
+
+      - name: Package
+        id: package
+        run: |
+          cp "$RFC_MIRROR/rfc-sections.db" "$RUNNER_TEMP/rfc-sections.db"
+          cd "$RUNNER_TEMP"
+          # -n: no name or timestamp in the header, so the same index
+          # compresses to the same bytes and the checksum means the content.
+          gzip -9 -n rfc-sections.db
+          sha256sum rfc-sections.db.gz > rfc-sections.db.gz.sha256
+          cp "$GITHUB_WORKSPACE/eval/results/bm25.json" eval-bm25.json
+          echo "tag=index-$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      # --latest=false: the release a package installer or a reader of the
+      # repository page resolves as latest stays the software. A second build
+      # on the same day replaces that day's assets rather than failing.
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.package.outputs.tag }}
+        run: |
+          cd "$RUNNER_TEMP"
+          files="rfc-sections.db.gz rfc-sections.db.gz.sha256 eval-bm25.json"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" $files --clobber
+          else
+            gh release create "$TAG" $files --latest=false \
+              --title "Section index $TAG" \
+              --notes "Prebuilt section index for \`rfc sync --index\`. eval-bm25.json holds its retrieval scores."
+          fi

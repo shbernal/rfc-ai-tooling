@@ -96,6 +96,21 @@ rather than reading a PASS as done.
   package instead of failing.
 - No RFC text is bundled in either surface; the corpus is fetched from the RFC
   Editor on demand and optionally mirrored locally via `rfc sync`.
+- The section index (`rfc-sections.db` in the mirror directory) is a SQLite
+  file: every document zlib-compressed, one row per section from
+  `find_sections`, and a contentless FTS5 table over each section's heading and
+  own text. `rfc index build` makes it from a synced mirror;
+  `.github/workflows/index.yml`, run by hand, builds it fresh, checks the eval
+  gold, scores it and publishes it as a release tagged `index-YYYY-MM-DD`,
+  never marked latest. `rfc sync --index` downloads the newest such release.
+  `publish.yml` skips the skill on those tags.
+- Changing the index layout means bumping `SECTION_INDEX_SCHEMA`, which makes
+  every older file refuse to open with a message naming `sync --index`, and
+  publishing a new index build before the release that reads it.
+- Ranking constants (`HEADING_WEIGHT`, `OBSOLETE_WEIGHT`, `DEFAULT_TOKENIZER`)
+  are tuned on the eval's `dev` split only; `docs/search-evaluation.md` has the
+  grid. A change to them, or to how a query becomes terms, is re-scored with
+  `make eval SYSTEM=bm25` and the result committed.
 
 ## Released
 

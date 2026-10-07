@@ -22,16 +22,21 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import gzip
+import hashlib
 import json
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 import threading
 import time
 import urllib.error
 import urllib.request
+import zlib
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from email.utils import formatdate
 from pathlib import Path
@@ -540,12 +545,27 @@ def load_index(mirror: Path, offline_only: bool = False) -> dict[int, Record]:
 
 
 def read_document(mirror: Path, number: int) -> str:
-    """Read an RFC from the mirror, fetching and caching it if absent.
+    """Read an RFC from the section index or the mirror, fetching and caching
+    it if neither has it.
+
+    The index comes first because it is what a machine without the mirror
+    holds, and an RFC's text never changes once published, so the two cannot
+    disagree. An index that cannot be opened is skipped here, not reported:
+    a read has other places to go, and search is where the problem is named.
 
     Note that this does not consult the index first. An RFC published since the
     last index refresh still fetches perfectly well, and gating retrieval on a
     cached index is how a stale index turns into "no such RFC".
     """
+    with contextlib.suppress(RFCError, sqlite3.Error):
+        conn = open_section_index(section_index_path(mirror))
+        if conn is not None:
+            try:
+                text = index_document(conn, number)
+            finally:
+                conn.close()
+            if text is not None:
+                return text
     path = document_path(mirror, number)
     if path.exists():
         return path.read_text(encoding="utf-8", errors="replace")
@@ -692,6 +712,19 @@ def section_range(sections: list[dict], wanted: str, total_lines: int) -> tuple[
         raise RFCError(f"no section {wanted!r}; run `sections` to list them")
 
     return sections[index]["line"], _section_end(sections, index, total_lines), sections[index]
+
+
+def section_at(sections: list[dict], line: int, total_lines: int) -> dict | None:
+    """The deepest section holding a 1-based line, or None before the first
+    heading. Deepest, because a match in 4.2.1 is also inside 4 and 4.2, and
+    the narrowest of the three is the one worth reading."""
+    found = None
+    for i, section in enumerate(sections):
+        if section["line"] > line:
+            break
+        if line <= _section_end(sections, i, total_lines):
+            found = section
+    return found
 
 
 def check_whole_document(
@@ -944,6 +977,344 @@ def _number_from_path(path: str) -> int | None:
 
 
 # --------------------------------------------------------------------------
+# Section index
+# --------------------------------------------------------------------------
+#
+# One SQLite file holding every document, zlib-compressed, and an FTS5 index
+# over its sections. It answers the question ripgrep cannot — which section
+# says this — ranked by BM25 rather than by how long a document is, and it
+# serves reads without the mirror or the network, so a machine holding only
+# this file can search and read the whole corpus.
+#
+# Segmentation is find_sections, the parser `get --section` uses, so a search
+# hit, an eval gold ID and a read always name the same span. Each row indexes
+# a section's own text, from its heading to the next heading at any depth: a
+# parent indexed with its subsections would repeat their text and outrank them
+# on length alone. The text before the first heading is a row too, headed by
+# the RFC's title, because that is where the abstract is.
+#
+# The FTS5 table is contentless. Storing the text in it as well would hold the
+# corpus twice, uncompressed; snippets come from the compressed copy instead.
+
+SECTION_INDEX_NAME = "rfc-sections.db"
+# Bumped whenever a reader of the old layout would misread the new one. A file
+# that does not match is refused by name, never half-read.
+SECTION_INDEX_SCHEMA = 1
+# Chosen on the eval set's dev split; docs/search-evaluation.md has the numbers.
+DEFAULT_TOKENIZER = "porter unicode61"
+HEADING_WEIGHT = 8.0
+OBSOLETE_WEIGHT = 0.5
+# A query is a question, not a document: past this many terms the extra ones
+# only make the OR wider and the search slower.
+MAX_QUERY_TERMS = 32
+
+# What `sync --index` costs, for messages written before the release listing
+# is fetched. Measured on the build this version was released with.
+INDEX_DOWNLOAD_SIZE = "about 270 MB"
+INDEX_RELEASES_URL = "https://api.github.com/repos/shbernal/rfc-ai-tooling/releases?per_page=50"
+INDEX_TAG_PREFIX = "index-"
+INDEX_ASSET = f"{SECTION_INDEX_NAME}.gz"
+
+# Words a question is made of and an answer is not. BM25 already discounts
+# them, but each one left in an OR query matches most of the corpus, and the
+# whole match set is scored before the page is cut.
+_STOPWORD_TEXT = (
+    "a about after all also an and any are as at be been being but by can could "
+    "did do does doing for from had has have having how i if in into is it its "
+    "may me might must my no not of on or our should so some such than that the "
+    "their them then there these they this those to too under until up us was we "
+    "were what when where whether which while who whom why will with would you "
+    "your"
+)
+_STOPWORDS = frozenset(_STOPWORD_TEXT.split())
+_TERM = re.compile(r"\w+")
+
+
+def section_index_path(mirror: Path) -> Path:
+    return mirror / SECTION_INDEX_NAME
+
+
+def query_terms(query: str) -> list[str]:
+    """The words of a query worth matching, lowercased, without repeats.
+
+    A stopword joined to another word by a hyphen or slash is part of a name
+    and stays: "after" is filler in a question and half of Retry-After. A query
+    made only of stopwords keeps them too: "to be or not to be" is a question
+    someone can ask, and an empty match is not an answer to it.
+    """
+    words: list[str] = []
+    kept: list[str] = []
+    for chunk in query.split():
+        parts = [w.lower() for w in _TERM.findall(chunk)]
+        compound = len(parts) > 1 and bool(re.search(r"\w[-/]\w", chunk))
+        for part in parts:
+            words.append(part)
+            if compound or part not in _STOPWORDS:
+                kept.append(part)
+    return list(dict.fromkeys(kept or words))[:MAX_QUERY_TERMS]
+
+
+def _segments(lines: list[str], sections: list[dict]) -> list[tuple[str | None, int, int]]:
+    """Each section's own span, heading line first, plus the front matter.
+
+    Returned as (section, first line, last line); the front matter's section
+    is None and its span is empty when a heading sits on line 1.
+    """
+    starts = [s["line"] for s in sections]
+    spans: list[tuple[str | None, int, int]] = [
+        (None, 1, (starts[0] - 1) if starts else len(lines))
+    ]
+    for i, section in enumerate(sections):
+        last = starts[i + 1] - 1 if i + 1 < len(starts) else len(lines)
+        spans.append((section["section"], section["line"], last))
+    return spans
+
+
+def build_section_index(
+    mirror: Path,
+    dest: Path,
+    *,
+    tokenizer: str = DEFAULT_TOKENIZER,
+    progress: Callable[[int, int], None] | None = None,
+) -> dict:
+    """Build the section index from a mirror into dest, replacing it whole.
+
+    Written to a sibling file and renamed into place, for the reason
+    _write_atomically gives: a reader must see the old index or the new one,
+    never a file still being filled.
+    """
+    if not is_populated(mirror):
+        raise RFCError(f"{mirror} is not a synced mirror; run `{invocation()} sync` first")
+    records = load_index(mirror, offline_only=True)
+    numbered = sorted(
+        (number, path)
+        for path in mirror.glob("rfc[0-9]*.txt")
+        if (number := _number_from_path(str(path))) is not None
+    )
+    started = time.time()
+    tmp = dest.with_name(f"{dest.name}.{os.getpid()}.part")
+    tmp.unlink(missing_ok=True)
+    conn = sqlite3.connect(tmp)
+    try:
+        conn.executescript(
+            f"""
+            PRAGMA journal_mode = OFF;
+            PRAGMA synchronous = OFF;
+            CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+            CREATE TABLE docs (
+                number INTEGER PRIMARY KEY,
+                obsolete INTEGER NOT NULL,
+                text BLOB NOT NULL
+            );
+            CREATE TABLE sections (
+                id INTEGER PRIMARY KEY,
+                number INTEGER NOT NULL,
+                section TEXT,
+                heading TEXT NOT NULL,
+                line INTEGER NOT NULL,
+                own_end INTEGER NOT NULL,
+                end_line INTEGER NOT NULL
+            );
+            CREATE VIRTUAL TABLE sections_fts USING fts5(
+                heading, body, content='', tokenize='{tokenizer}'
+            );
+            """
+        )
+        rows = 0
+        for done, (number, path) in enumerate(numbered, 1):
+            raw = path.read_bytes()
+            lines = split_lines(raw.decode("utf-8", errors="replace"))
+            mask = furniture_mask(lines)
+            sections = find_sections(lines, mask)
+            record = records.get(number)
+            title = record.title if record else ""
+            conn.execute(
+                "INSERT INTO docs VALUES (?, ?, ?)",
+                (number, int(bool(record and record.obsoleted_by)), zlib.compress(raw, 9)),
+            )
+            for i, (section, first, last) in enumerate(_segments(lines, sections)):
+                if section is None:
+                    heading, body_from, end = title, first, last
+                    if first > last:
+                        continue
+                else:
+                    heading, body_from = sections[i - 1]["title"], first + 1
+                    end = _section_end(sections, i - 1, len(lines))
+                body = "\n".join(
+                    line
+                    for line, masked in zip(
+                        lines[body_from - 1 : last], mask[body_from - 1 : last], strict=True
+                    )
+                    if not masked
+                )
+                cursor = conn.execute(
+                    "INSERT INTO sections (number, section, heading, line, own_end, end_line) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (number, section, heading, first, last, end),
+                )
+                conn.execute(
+                    "INSERT INTO sections_fts (rowid, heading, body) VALUES (?, ?, ?)",
+                    (cursor.lastrowid, heading, body),
+                )
+                rows += 1
+            if progress:
+                progress(done, len(numbered))
+        conn.execute("CREATE INDEX sections_by_number ON sections (number)")
+        conn.execute("INSERT INTO sections_fts (sections_fts) VALUES ('optimize')")
+        index_file = index_path(mirror)
+        meta = {
+            "schema": str(SECTION_INDEX_SCHEMA),
+            "built": formatdate(usegmt=True),
+            "rfc_index": formatdate(index_file.stat().st_mtime, usegmt=True),
+            "documents": str(len(numbered)),
+            "sections": str(rows),
+            "highest_rfc": str(numbered[-1][0] if numbered else 0),
+            "tokenizer": tokenizer,
+            "built_by": __version__,
+        }
+        conn.executemany("INSERT INTO meta VALUES (?, ?)", meta.items())
+        conn.commit()
+        conn.execute("VACUUM")
+    except BaseException:
+        conn.close()
+        tmp.unlink(missing_ok=True)
+        raise
+    conn.close()
+    os.replace(tmp, dest)
+    return {
+        **meta,
+        "path": str(dest),
+        "bytes": dest.stat().st_size,
+        "seconds": round(time.time() - started, 1),
+    }
+
+
+def open_section_index(path: Path) -> sqlite3.Connection | None:
+    """Open the index read-only, or return None when there is none.
+
+    A file that is there but unreadable, or written for another schema, is an
+    error rather than None: treating it as absent would send the caller to
+    ripgrep or the network without ever saying the index it downloaded is the
+    wrong one.
+    """
+    if not path.exists():
+        return None
+    conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+    try:
+        row = conn.execute("SELECT value FROM meta WHERE key = 'schema'").fetchone()
+    except sqlite3.DatabaseError as exc:
+        conn.close()
+        raise RFCError(f"{path} is not a readable section index ({exc}); delete it") from exc
+    if row is None or row[0] != str(SECTION_INDEX_SCHEMA):
+        conn.close()
+        raise RFCError(
+            f"{path} is a section index in format {row[0] if row else '?'}, and this "
+            f"version reads format {SECTION_INDEX_SCHEMA}. Run `{invocation()} sync "
+            f"--index` for a current one, or `{invocation()} index build` from a mirror."
+        )
+    return conn
+
+
+def section_index_info(conn: sqlite3.Connection) -> dict:
+    return dict(conn.execute("SELECT key, value FROM meta").fetchall())
+
+
+def index_document(conn: sqlite3.Connection, number: int) -> str | None:
+    row = conn.execute("SELECT text FROM docs WHERE number = ?", (number,)).fetchone()
+    return zlib.decompress(row[0]).decode("utf-8", errors="replace") if row else None
+
+
+def _snippet(lines: list[str], first: int, last: int, terms: list[str]) -> dict | None:
+    """The line in a span that holds the most query terms.
+
+    Matched by prefix, because the index stems and this does not: "caching"
+    should light up a line that says "cached". A heading-only hit has no body
+    line to quote, and gets the heading.
+    """
+    stems = [t[:5] if len(t) > 5 else t for t in terms]
+    best, best_score = None, 0
+    for number in range(first, last + 1):
+        words = [w.lower() for w in _TERM.findall(lines[number - 1])]
+        score = sum(any(w.startswith(stem) for w in words) for stem in stems)
+        if score > best_score:
+            best, best_score = number, score
+    if best is None:
+        return None
+    return {"line": best, "text": lines[best - 1].strip()}
+
+
+def search_sections(
+    conn: sqlite3.Connection,
+    query: str,
+    limit: int,
+    *,
+    heading_weight: float = HEADING_WEIGHT,
+    obsolete_weight: float = OBSOLETE_WEIGHT,
+) -> tuple[list[dict], int]:
+    """Rank sections by BM25 over the query's terms; return a page and the total.
+
+    Terms are ORed, not ANDed: a question's words are evidence, and a section
+    that answers it rarely contains all of them. An obsoleted RFC's score is
+    scaled by obsolete_weight, which ranks it lower as the weight falls.
+    """
+    _check_limit(limit)
+    terms = query_terms(query)
+    if not terms:
+        raise RFCError("query has no words to search for")
+    # Quoted so that a term is never read as FTS5 syntax, and split on "_" so
+    # that each quoted string is one token to the tokenizer: unicode61 splits
+    # LOCAL_PREF in two, and two tokens in quotes are a phrase.
+    tokens = dict.fromkeys(part for term in terms for part in term.split("_") if part)
+    match = " OR ".join(f'"{token}"' for token in tokens)
+    try:
+        total = conn.execute(
+            "SELECT count(*) FROM sections_fts WHERE sections_fts MATCH ?", (match,)
+        ).fetchone()[0]
+        rows = conn.execute(
+            """
+            SELECT s.number, s.section, s.heading, s.line, s.own_end, s.end_line,
+                   bm25(sections_fts, ?, 1.0) * (CASE WHEN d.obsolete THEN ? ELSE 1.0 END)
+                       AS score
+            FROM sections_fts
+            JOIN sections s ON s.id = sections_fts.rowid
+            JOIN docs d ON d.number = s.number
+            WHERE sections_fts MATCH ?
+            ORDER BY score, s.number, s.line
+            LIMIT ?
+            """,
+            (heading_weight, obsolete_weight, match, limit),
+        ).fetchall()
+    except sqlite3.OperationalError as exc:
+        # Exactly the missing module. Every FTS5 error starts "fts5:", and
+        # reporting a bad query as a missing extension sends the reader to
+        # rebuild Python over a typo.
+        if "no such module: fts5" in str(exc):
+            raise RFCError(
+                "this Python's SQLite was built without FTS5, so the section index "
+                "cannot be searched here"
+            ) from exc
+        raise
+    documents: dict[int, list[str]] = {}
+    results = []
+    for number, section, heading, line, own_end, end_line, score in rows:
+        if number not in documents:
+            documents[number] = split_lines(index_document(conn, number) or "")
+        results.append(
+            {
+                "number": number,
+                "section": section,
+                "heading": heading,
+                "line": line,
+                "end_line": end_line,
+                "lines": end_line - line + 1,
+                "snippet": _snippet(documents[number], line, own_end, terms),
+                "score": round(-score, 4),
+            }
+        )
+    return results, total
+
+
+# --------------------------------------------------------------------------
 # Payloads
 # --------------------------------------------------------------------------
 #
@@ -988,16 +1359,17 @@ def fulltext_unavailable_message(*, retry_hint: str, remote: bool = False) -> st
     """
     if remote:
         where = (
-            "There is no RFC mirror on the machine running this server. It is "
-            "answering over HTTP, so that machine may not be yours: if it is, run "
-            f"`{invocation()} sync` there; if it is not, full-text search is "
-            "unavailable on this instance and there is nothing to install."
+            "There is no section index or RFC mirror on the machine running this "
+            "server. It is answering over HTTP, so that machine may not be yours: if "
+            f"it is, run `{invocation()} sync --index` there; if it is not, full-text "
+            "search is unavailable on this instance and there is nothing to install."
         )
     else:
         where = (
-            "Full-text search needs a local RFC mirror, which is not present. "
-            f"Run `{invocation()} sync` in any shell on this machine "
-            "(512 MB, a few minutes) to create one."
+            "Full-text search needs the section index or a local RFC mirror, and "
+            f"neither is present. Run `{invocation()} sync --index` in any shell on "
+            f"this machine ({INDEX_DOWNLOAD_SIZE}) for ranked search by section, or "
+            f"`{invocation()} sync` (512 MB, a few minutes) for the corpus as files."
         )
     return (
         f"{where} Searching titles instead would quietly answer a different "
@@ -1039,16 +1411,16 @@ def search_payload(
 
     populated = is_populated(mirror)
     if scope == "fulltext":
-        if not populated:
-            raise RFCError(unavailable_message)
-        results, tool, total = search_fulltext(mirror, query, limit, use_regex=regex)
-        records = load_index(mirror, offline_only=True)
+        results, tool, total, problem = _fulltext(mirror, query, limit, regex, populated)
+        if results is None:
+            raise RFCError(problem or unavailable_message)
+        records = _records_for_results(mirror)
         for result in results:
             record = records.get(result["number"])
             result["header"] = record.header() if record else bare_header(result["number"])
             result["title"] = record.title if record else ""
             result["record"] = record.to_dict() if record else None
-        return {
+        payload = {
             "query": query,
             "scope": "fulltext",
             "tool": tool,
@@ -1057,6 +1429,9 @@ def search_payload(
             "truncated": total > len(results),
             "results": results,
         }
+        if problem:
+            payload["note"] = f"searched the mirror instead of the section index: {problem}"
+        return payload
 
     hits, total = search_titles(load_index(mirror), query, limit, regex)
     return {
@@ -1068,6 +1443,74 @@ def search_payload(
         "fulltext_available": populated,
         "results": [r.to_dict() for r in hits],
     }
+
+
+def _fulltext(
+    mirror: Path, query: str, limit: int, regex: bool, populated: bool
+) -> tuple[list[dict] | None, str, int, str | None]:
+    """Search with the best backend present: the section index, else ripgrep
+    or grep over the mirror.
+
+    Returns (results, tool, total, problem). Results are None when nothing
+    present can answer, and the problem, if any, says why. Results with a
+    problem mean the index could not be used and the mirror answered instead,
+    which the caller says out loud: a silent fallback is a different ranking
+    nobody asked for. A pattern is ripgrep's business, so --regex skips the
+    index rather than reading a regex as words.
+    """
+    problem = None
+    if not regex:
+        try:
+            conn = open_section_index(section_index_path(mirror))
+        except RFCError as exc:
+            conn, problem = None, str(exc)
+        if conn is not None:
+            try:
+                results, total = search_sections(conn, query, limit)
+                return results, "index", total, None
+            except RFCError as exc:
+                # FTS5 missing from this interpreter's SQLite. The mirror can
+                # still answer; anything else the index raises is a real error.
+                if not populated or "FTS5" not in str(exc):
+                    raise
+                problem = str(exc)
+            finally:
+                conn.close()
+    if populated:
+        results, tool, total = search_fulltext(mirror, query, limit, use_regex=regex)
+        _attach_sections(mirror, results)
+        return results, tool, total, problem
+    if regex and section_index_path(mirror).exists():
+        problem = (
+            "a regex is matched line by line against the text, which needs the "
+            f"synced mirror (`{invocation()} sync`); the section index searches words. "
+            "Drop the regex to search the index."
+        )
+    return None, "", 0, problem
+
+
+def _attach_sections(mirror: Path, results: list[dict]) -> None:
+    """Name the section each quoted line falls in, so a ripgrep hit says
+    where to read just as an index hit does."""
+    for result in results:
+        lines = split_lines(read_document(mirror, result["number"]))
+        sections = find_sections(lines)
+        for match in result["matches"]:
+            section = section_at(sections, match["line"], len(lines))
+            match["section"] = section["section"] if section else None
+
+
+def _records_for_results(mirror: Path) -> dict[int, Record]:
+    """Banners for search results, from the index on disk if there is one.
+
+    offline_only, as before: a search must not stall on a refresh. A machine
+    holding only the section index may have no index text at all yet, and its
+    results then carry bare banners rather than failing.
+    """
+    try:
+        return load_index(mirror, offline_only=True)
+    except RFCError:
+        return {}
 
 
 def sections_payload(mirror: Path, number: int) -> dict:
@@ -1212,6 +1655,104 @@ def run_sync(mirror: Path, bwlimit: str, assume_yes: bool, dry_run: bool) -> int
     return result.returncode
 
 
+def latest_index_release() -> dict:
+    """The newest published section index: its tag, asset URL, size and checksum URL.
+
+    Index builds are releases of their own, tagged index-YYYY-MM-DD and never
+    marked latest, so the release a package installer resolves stays the
+    software. The listing is newest first; the first index tag in it wins.
+    """
+    data, _ = _fetch(INDEX_RELEASES_URL)
+    try:
+        releases = json.loads(data or b"[]")
+    except ValueError as exc:
+        raise RFCError(f"unreadable release listing from {INDEX_RELEASES_URL}") from exc
+    for release in releases:
+        if not str(release.get("tag_name", "")).startswith(INDEX_TAG_PREFIX):
+            continue
+        assets = {a.get("name"): a for a in release.get("assets", [])}
+        asset, checksum = assets.get(INDEX_ASSET), assets.get(f"{INDEX_ASSET}.sha256")
+        if asset and checksum:
+            return {
+                "tag": release["tag_name"],
+                "url": asset["browser_download_url"],
+                "bytes": int(asset.get("size", 0)),
+                "sha256_url": checksum["browser_download_url"],
+            }
+    raise RFCError(f"no published section index found at {INDEX_RELEASES_URL}")
+
+
+def _download(url: str, dest: Path) -> str:
+    """Stream a URL to a file and return its SHA-256.
+
+    Not _fetch: that holds the body in memory, which is fine for a 2 MB index
+    and not for this.
+    """
+    digest = hashlib.sha256()
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response, dest.open("wb") as out:
+            while chunk := response.read(1 << 20):
+                digest.update(chunk)
+                out.write(chunk)
+    except urllib.error.HTTPError as exc:
+        raise RFCError(f"HTTP {exc.code} fetching {url}") from exc
+    except urllib.error.URLError as exc:
+        raise RFCError(f"network error fetching {url}: {exc.reason}") from exc
+    return digest.hexdigest()
+
+
+def run_index_download(mirror: Path, assume_yes: bool) -> int:
+    """Fetch the prebuilt section index, verify it, and swap it into place.
+
+    Checked twice before it replaces anything: the download against the
+    published SHA-256, and the decompressed file by opening it, which refuses
+    a format this version cannot read. A failure at either step leaves the
+    previous index untouched.
+    """
+    release = latest_index_release()
+    size = f"{release['bytes'] / 1e6:.0f} MB" if release["bytes"] else "size unknown"
+    dest = section_index_path(mirror)
+    print(f"About to download the section index into {dest}")
+    print(f"  {release['tag']}, {size} compressed")
+    print(f"  source: {release['url']}")
+    if not assume_yes:
+        if not sys.stdin.isatty():
+            raise RFCError("refusing to download non-interactively without --yes")
+        answer = input("Proceed? [y/N] ").strip().lower()
+        if answer not in {"y", "yes"}:
+            print("Cancelled.")
+            return 1
+    mirror.mkdir(parents=True, exist_ok=True)
+    expected, _ = _fetch(release["sha256_url"])
+    expected_hex = (expected or b"").decode("ascii", errors="replace").split()[:1]
+    packed = dest.with_name(f"{dest.name}.{os.getpid()}.gz.part")
+    unpacked = dest.with_name(f"{dest.name}.{os.getpid()}.part")
+    try:
+        actual = _download(release["url"], packed)
+        if not expected_hex or actual != expected_hex[0].lower():
+            raise RFCError(
+                f"the downloaded index does not match its published SHA-256 "
+                f"(expected {expected_hex[0] if expected_hex else 'nothing'}, got {actual})"
+            )
+        with gzip.open(packed, "rb") as source, unpacked.open("wb") as out:
+            shutil.copyfileobj(source, out, 1 << 20)
+        conn = open_section_index(unpacked)
+        if conn is None:
+            raise RFCError("the downloaded index vanished before it could be checked")
+        info = section_index_info(conn)
+        conn.close()
+        os.replace(unpacked, dest)
+    finally:
+        packed.unlink(missing_ok=True)
+        unpacked.unlink(missing_ok=True)
+    print(
+        f"\nDone. {info.get('documents', '?')} documents, {info.get('sections', '?')} "
+        f"sections, built {info.get('built', '?')}, in {dest}"
+    )
+    return 0
+
+
 # --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
@@ -1274,20 +1815,51 @@ def cmd_status(args: argparse.Namespace) -> int:
         lines.append(f"index: {path} ({entries} entries, {_describe_age(age)})")
     else:
         lines.append(f"index: not present (will be fetched on first use) — {path}")
-    if not populated:
+    section_index = _section_index_status(section_index_path(mirror))
+    lines.append(section_index.pop("line"))
+    searchable = populated or section_index.get("usable", False)
+    if not searchable:
         lines.append(
-            f"run `{invocation()} sync` for full-text search across the whole corpus (512 MB)"
+            f"run `{invocation()} sync --index` for ranked full-text search, or "
+            f"`{invocation()} sync` for the whole corpus (512 MB)"
         )
 
     payload = {
         "mode": "offline" if populated else "online",
-        "fulltext_available": populated,
+        "fulltext_available": searchable,
         "mirror": str(mirror),
         "documents": docs,
         "index": index_info,
+        "section_index": section_index,
     }
     _emit(payload, "\n".join(lines), args.json)
     return 0
+
+
+def _section_index_status(path: Path) -> dict:
+    """What `status` says about the section index, plus the line it prints."""
+    info: dict = {"present": path.exists(), "path": str(path)}
+    if not path.exists():
+        info["line"] = f"section index: not present — {path}"
+        return info
+    try:
+        conn = open_section_index(path)
+    except RFCError as exc:
+        info["usable"] = False
+        info["problem"] = str(exc)
+        info["line"] = f"section index: {path} (unusable: {exc})"
+        return info
+    assert conn is not None
+    try:
+        meta = section_index_info(conn)
+    finally:
+        conn.close()
+    info.update(usable=True, bytes=path.stat().st_size, **meta)
+    info["line"] = (
+        f"section index: {path} ({meta.get('documents', '?')} documents, "
+        f"{meta.get('sections', '?')} sections, built {meta.get('built', '?')})"
+    )
+    return info
 
 
 def cmd_meta(args: argparse.Namespace) -> int:
@@ -1336,18 +1908,34 @@ def _search_human(payload: dict) -> str:
     rows = payload["results"]
     if not rows:
         return "no matches"
-    if payload["scope"] == "fulltext":
+    if payload["scope"] == "fulltext" and payload.get("tool") == "index":
         lines: list[str] = []
         for row in rows:
+            where = f"§{row['section']} {row['heading']}" if row["section"] else "front matter"
             lines.append(row["header"])
-            lines += [f"   {m['line']}: {m['text']}" for m in row["matches"]]
+            lines.append(f"   {where}  (line {row['line']}, {row['lines']} lines)")
+            if row["snippet"]:
+                lines.append(f"   {row['snippet']['line']}: {row['snippet']['text']}")
+            lines.append("")
+        human = "\n".join(lines).strip()
+    elif payload["scope"] == "fulltext":
+        lines = []
+        for row in rows:
+            lines.append(row["header"])
+            lines += [
+                f"   {m['line']}: {m['text']}"
+                + (f"  (§{m['section']})" if m.get("section") else "")
+                for m in row["matches"]
+            ]
             lines.append("")
         human = "\n".join(lines).strip()
     else:
         human = "\n".join(row["header"] for row in rows)
     human += _truncation_note(payload["count"], payload["total"])
     if payload["scope"] == "title" and not payload["fulltext_available"]:
-        human += f"\n\n(titles only — `{invocation()} sync` enables full-text search)"
+        human += f"\n\n(titles only — `{invocation()} sync --index` enables full-text search)"
+    if payload.get("note"):
+        human += f"\n\n({payload['note']})"
     return human
 
 
@@ -1418,7 +2006,29 @@ def cmd_get(args: argparse.Namespace) -> int:
 
 def cmd_sync(args: argparse.Namespace) -> int:
     mirror = resolve_mirror(args.mirror)
+    if args.index:
+        if args.dry_run:
+            raise RFCError("--dry-run applies to the corpus sync, not to --index")
+        return run_index_download(mirror, args.yes)
     return run_sync(mirror, args.bwlimit, args.yes, args.dry_run)
+
+
+def cmd_index_build(args: argparse.Namespace) -> int:
+    mirror = resolve_mirror(args.mirror)
+    dest = Path(args.output).expanduser() if args.output else section_index_path(mirror)
+
+    def progress(done: int, total: int) -> None:
+        if done % 500 == 0 or done == total:
+            print(f"\r{done}/{total} documents", end="", file=sys.stderr, flush=True)
+
+    stats = build_section_index(mirror, dest, tokenizer=args.tokenizer, progress=progress)
+    print(file=sys.stderr)
+    human = (
+        f"{stats['documents']} documents, {stats['sections']} sections, "
+        f"{stats['bytes'] / 1e6:.0f} MB, {stats['seconds']:.0f}s\n{stats['path']}"
+    )
+    _emit(stats, human, args.json)
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1487,10 +2097,27 @@ def build_parser() -> argparse.ArgumentParser:
     p_get.set_defaults(func=cmd_get)
 
     p_sync = sub.add_parser("sync", help="download the corpus for full-text search (512 MB)")
+    p_sync.add_argument(
+        "--index",
+        action="store_true",
+        help="download the prebuilt section index instead: ranked search and reads, no mirror",
+    )
     p_sync.add_argument("--bwlimit", default="2M", help="rsync bandwidth limit (default: 2M)")
     p_sync.add_argument("--yes", action="store_true", help="skip the confirmation prompt")
     p_sync.add_argument("--dry-run", action="store_true")
     p_sync.set_defaults(func=cmd_sync)
+
+    p_index = sub.add_parser("index", help="build the section index from a synced mirror")
+    index_sub = p_index.add_subparsers(dest="index_command", required=True)
+    p_build = index_sub.add_parser("build", help="index every section of the mirror")
+    p_build.add_argument("--output", help="where to write it (default: inside the mirror)")
+    p_build.add_argument(
+        "--tokenizer",
+        default=DEFAULT_TOKENIZER,
+        help=f"FTS5 tokenizer (default: {DEFAULT_TOKENIZER!r})",
+    )
+    add_read_flags(p_build)
+    p_build.set_defaults(func=cmd_index_build)
 
     return parser
 

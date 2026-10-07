@@ -19,9 +19,9 @@ interpreter — no install step, no packages.
 python3 scripts/rfc.py <command> [options]
 ```
 
-It works immediately, fetching documents over HTTPS as needed. If a local mirror
-has been synced it reads from disk instead and can search the full text of every
-RFC. Same commands either way.
+It works immediately, fetching documents over HTTPS as needed. If the section
+index has been downloaded or a local mirror synced, it reads from disk instead and
+can search the full text of every RFC. Same commands either way.
 
 ## The loop
 
@@ -68,21 +68,35 @@ python3 scripts/rfc.py search "http semantics"        # all terms must appear in
 python3 scripts/rfc.py search 'HTTP/\d\.\d' --regex
 ```
 
-Title search is available always. Searching document bodies requires a synced
-mirror:
+Title search is available always. Searching document bodies needs the section
+index or a synced mirror:
 
 ```bash
-python3 scripts/rfc.py search "must-revalidate" --fulltext
-python3 scripts/rfc.py search "application/json;charset" --fulltext
+python3 scripts/rfc.py search "how long can a cache serve a stale response" --fulltext
 ```
 
-Queries are literal, so the second one asks what it looks like it asks. `--regex`
-opts into pattern matching in either scope; under `--fulltext` the dialect is
-whichever of `rg` or `grep` is installed, and `--json` names it in `tool`.
+With the section index, each result is one section, ranked by BM25 with heading
+words counting more, and names the section to read next:
 
-If there is no mirror, `--fulltext` fails with a message rather than falling back
-to titles — a title search silently standing in for a full-text search answers a
-different question than the one asked.
+```
+RFC 9111 — HTTP Caching  [INTERNET STANDARD]
+   §4.2.4 Serving Stale Responses  (line 784, 17 lines)
+   790: A cache MUST NOT generate a stale response if it is prohibited by an
+```
+
+Pass that number straight to `get --section`. The query is words, not a phrase:
+write the question or its key terms, and expect sections that use some of them,
+best first. A section with no number is the RFC's front matter.
+
+Without the index, `--fulltext` searches the mirror with `rg` or `grep`: the
+query is a literal string, results are whole RFCs ranked by how many lines
+match, and each quoted line names its section. `--regex` opts into pattern
+matching, in titles or over the mirror; the index cannot take a pattern.
+`--json` names the backend in `tool`.
+
+If neither is present, `--fulltext` fails with a message rather than falling
+back to titles — a title search silently standing in for a full-text search
+answers a different question than the one asked.
 
 Both scopes return at most `--limit` results (default 20, at most 200), and an
 empty query is refused. Title results put current RFCs before superseded ones, so
@@ -176,14 +190,21 @@ rg -l 'Retry-After' "$mirror"
 
 ## Full-text mode is opt-in — never sync unprompted
 
-`python3 scripts/rfc.py sync` downloads 512 MB from the RFC Editor's
-volunteer-run rsync mirror and takes a few minutes.
+Two downloads enable it, and neither is small:
 
-**Only run it when the user explicitly asks for it.** Do not run it because
-`--fulltext` failed, do not run it to "set things up", and do not run it as a
-first step. Suggest it, explain the cost, and let the user decide:
+- `python3 scripts/rfc.py sync --index` fetches the prebuilt section index,
+  about 270 MB, from this project's GitHub releases. It gives ranked search by
+  section and serves every read from disk.
+- `python3 scripts/rfc.py sync` copies the corpus as 512 MB of text files from
+  the RFC Editor's volunteer-run rsync mirror and takes a few minutes. It is
+  what `rg` and `--regex` search.
+
+**Only run either when the user explicitly asks for it.** Do not run one because
+`--fulltext` failed, do not run one to "set things up", and do not run one as a
+first step. Suggest them, explain the cost, and let the user decide:
 
 ```bash
+python3 scripts/rfc.py sync --index    # prompts for confirmation
 python3 scripts/rfc.py sync            # prompts for confirmation
 ```
 

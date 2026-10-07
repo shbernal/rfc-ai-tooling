@@ -8,6 +8,40 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## Unreleased
+
+### Breaking
+
+- **Full-text search returns sections when the section index is present.**
+  `search --fulltext` / `scope='fulltext'` used to return whole RFCs ranked by
+  how many lines matched. With the index, each result is one section: `section`
+  (null for the front matter), `heading`, `line`, `end_line`, `lines`, a
+  `snippet` holding the best line, and a BM25 `score`; `total` counts sections,
+  and `tool` is `"index"`. The query is words ORed together, not a literal
+  string. Without the index nothing changes except that each quoted line in
+  `matches` now carries the `section` it falls in. To get the old literal,
+  document-level search with the index present, pass `--regex` /
+  `regex=true` with the string escaped; patterns always go to the mirror.
+- **`get` reads from the section index before the mirror or the network.** The
+  text is the same; a machine with only the index never contacts the RFC
+  Editor for a document.
+
+### Added
+
+- **`rfc sync --index`** downloads the prebuilt section index (about 270 MB,
+  360 MB on disk) from this project's GitHub releases, checks it against the
+  published SHA-256, and swaps it in only once it opens. It is the way to get
+  full-text search without the 512 MB mirror, and it is what a hosted server
+  needs for it.
+- **`rfc index build`** builds the index from a synced mirror in about two and
+  a half minutes. `--output` writes it elsewhere.
+- **`status`** reports the section index: whether it is usable, when it was
+  built and from which RFC index, and how many documents and sections it holds.
+  `fulltext_available` is true with either the index or the mirror.
+- A search that could not use a present index, because it is of another
+  format or this Python's SQLite lacks FTS5, answers from the mirror and says so
+  in `note`.
+
 ## 0.5.1 — 2026-10-05
 
 ### Fixed

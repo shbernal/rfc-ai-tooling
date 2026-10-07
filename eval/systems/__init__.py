@@ -4,12 +4,12 @@ A system is a module here exposing `retrieve(query, k) -> list[Hit]`, best
 first. `score.py --system NAME` imports `systems.NAME`.
 
 Everything a system needs from the corpus goes through `core/rfc.py`, so a
-section a system returns is one `rfc get --section` can return too.
+section a system returns is one `rfc get --section` can return too, and its
+text is what that read would print.
 """
 
 from __future__ import annotations
 
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +17,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[2] / "core"))
 
 import rfc  # noqa: E402
+
+# The words a query is matched on, the same for every system: a baseline that
+# tokenised differently from the system it is compared with would measure the
+# tokeniser.
+terms = rfc.query_terms
 
 
 @dataclass(frozen=True)
@@ -33,35 +38,12 @@ class Hit:
     text: str
 
 
-# Question words and filler. A natural-language query matched term by term
-# would otherwise rank documents by how often they say "what" and "does".
-_STOPWORDS = """
-    a about above after again against all also am an and any are as at be
-    because been before being below between both but by can could did do does
-    doing down during each else few for from further get gets got had has have
-    having how i if in into is it its itself just let may me might more most
-    must my no nor not now of off on once one only or other our out over own
-    per same say says should so some such than that the their them then there
-    these they this those through to too under until up upon use used using
-    very via want was way we were what when where whether which while who whom
-    why will with within without would you your
-"""
-STOPWORDS = frozenset(_STOPWORDS.split())
-
-_WORD = re.compile(r"[a-z0-9]+")
-
-
-def terms(query: str) -> list[str]:
-    """Content words of a query, lowercased, in order, without repeats."""
-    seen: dict[str, None] = {}
-    for word in _WORD.findall(query.lower()):
-        if len(word) > 1 and word not in STOPWORDS:
-            seen.setdefault(word)
-    return list(seen)
-
-
 class Corpus:
-    """A mirror's documents, split and sectioned once per process."""
+    """A mirror's documents, split and sectioned once per process.
+
+    Reads straight from the mirror's files, never through the section index or
+    the network, so the corpus a system is scored on is the one on disk.
+    """
 
     def __init__(self, mirror: Path | None = None) -> None:
         self.mirror = mirror or rfc.resolve_mirror()
@@ -73,8 +55,6 @@ class Corpus:
     def lines(self, number: int) -> list[str]:
         if number not in self._lines:
             path = rfc.document_path(self.mirror, number)
-            # The index lists RFCs the mirror may not hold; never fetch here,
-            # or a score would depend on the network.
             text = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
             self._lines[number] = rfc.split_lines(text)
         return self._lines[number]
@@ -85,21 +65,21 @@ class Corpus:
         return self._sections[number]
 
     def text(self, number: int, start: int, end: int) -> str:
-        """Lines start..end, 1-based and inclusive."""
-        return "\n".join(self.lines(number)[start - 1 : end])
+        """Lines start..end, 1-based and inclusive, without page furniture, as
+        `rfc get` prints them."""
+        return rfc.slice_lines(self.lines(number), start, end, raw=False)
 
     def document(self, number: int) -> str:
-        return "\n".join(self.lines(number))
+        return self.text(number, 1, len(self.lines(number)))
 
-    def section_at(self, number: int, line: int) -> dict | None:
-        """The deepest section whose range holds a 1-based line, or None in the
-        front matter before the first heading."""
+    def section_text(self, number: int, section: str | None) -> str:
+        """What `get --section` returns, or the front matter for None."""
         sections = self.sections(number)
         total = len(self.lines(number))
-        found = None
-        for i, section in enumerate(sections):
-            if section["line"] > line:
-                break
-            if line <= rfc._section_end(sections, i, total):
-                found = section
-        return found
+        if section is None:
+            return self.text(number, 1, sections[0]["line"] - 1 if sections else total)
+        first, last, _ = rfc.section_range(sections, section, total)
+        return self.text(number, first, last)
+
+    def section_at(self, number: int, line: int) -> dict | None:
+        return rfc.section_at(self.sections(number), line, len(self.lines(number)))

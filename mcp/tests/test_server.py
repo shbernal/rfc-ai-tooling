@@ -189,6 +189,40 @@ def test_fulltext_without_a_mirror_names_what_to_run(isolated_mirror):
     assert "scope='title'" in refused
 
 
+def test_fulltext_without_a_mirror_offers_the_index_first(isolated_mirror):
+    refused = refusal(server.search_rfcs, "congestion", scope="fulltext")
+    assert "sync --index" in refused
+
+
+def test_an_index_alone_serves_search_and_reads_across_calls(
+    isolated_mirror, tmp_path_factory, monkeypatch
+):
+    """The server holds no connection between calls: each opens the index and
+    closes it, so a long-lived process never serves from a file that has since
+    been replaced. Two rounds, with the file swapped between them, prove it."""
+    source = tmp_path_factory.mktemp("mirror")
+    (source / "rfc1000.txt").write_text(
+        "Front.\n\n1.  Widget Handling\n\n   How a widget is handled.\n", encoding="utf-8"
+    )
+    rfc.index_path(source).write_text(INDEX_EXCERPT, encoding="utf-8")
+    (source / rfc.SYNC_STAMP).touch()
+    rfc.build_section_index(source, rfc.section_index_path(isolated_mirror))
+    monkeypatch.setattr(rfc, "_fetch", offline)
+
+    found = server.search_rfcs("widget", scope="fulltext")
+    assert found["tool"] == "index"
+    assert found["results"][0]["section"] == "1"
+    read = server.get_rfc(1000, section=found["results"][0]["section"])
+    assert "How a widget is handled." in read["content"]
+
+    (source / "rfc1000.txt").write_text(
+        "Front.\n\n1.  Gadget Handling\n\n   How a gadget is handled.\n", encoding="utf-8"
+    )
+    rfc.build_section_index(source, rfc.section_index_path(isolated_mirror))
+    assert server.search_rfcs("gadget", scope="fulltext")["results"][0]["section"] == "1"
+    assert "gadget" in server.get_rfc(1000, section="1")["content"]
+
+
 def test_an_unknown_scope_is_refused(isolated_mirror):
     assert "scope" in refusal(server.search_rfcs, "anything", scope="everything")
 

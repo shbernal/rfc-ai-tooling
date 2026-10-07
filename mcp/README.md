@@ -27,13 +27,16 @@ the per-server log records only the handshake, so it cannot tell you either way
 
 | Tool | What it does |
 |---|---|
-| `search_rfcs` | Search titles, or the full text of every RFC if a mirror has been synced |
+| `search_rfcs` | Search titles, or the full text of every RFC, ranked by section, if the section index is present |
 | `list_sections` | An RFC's headings with line numbers — the cheap first call |
 | `get_rfc` | Read one section, or a line range |
 
-Queries are literal by default; `regex=true` opts into pattern matching, and
-under `scope='fulltext'` the dialect is whichever of `rg` or `grep` the machine
-has, which the payload names in `tool`. Title results put current RFCs before
+With the section index, a full-text query is words, and each result is one
+section ranked by BM25, carrying the section number to pass to `get_rfc` and the
+line that best matches. Without it, full-text search falls back to `rg` or
+`grep` over a synced mirror, where the query is a literal string and results are
+whole RFCs; `regex=true` opts into pattern matching there and in titles. The
+payload names the backend in `tool`. Title results put current RFCs before
 superseded ones, so a page cut short at `limit` keeps the document you want
 rather than the one it replaced.
 
@@ -59,22 +62,27 @@ That warning is the reason to use this rather than let a model fetch
 ## Full-text search
 
 Works with no setup, fetching documents on demand. Full-text search additionally
-requires a local mirror, which the user creates from a shell:
+needs the section index, which the user downloads from a shell:
 
 ```bash
-uvx mcp-server-rfc sync
+uvx mcp-server-rfc sync --index
 ```
 
-The same command that runs the server runs its CLI: `sync` downloads the
-corpus, `status` reports what is present, and `uvx mcp-server-rfc <command>
---help` covers the rest. It is also the command the server names in the error
-you get when full-text search is asked for without a mirror.
+About 270 MB from this project's GitHub releases, checked against its published
+SHA-256. It ranks sections by BM25 and serves every read from disk, so the
+server stops fetching from the RFC Editor. `uvx mcp-server-rfc sync` instead
+copies the corpus as 512 MB of text files from the RFC Editor's volunteer-run
+rsync mirror, which is what `rg` and `regex=true` search.
 
-512 MB, a few minutes, entirely optional. The server deliberately does not
-expose a sync tool: half a gigabyte pulled from a volunteer-run mirror should be
-a person's decision, not a model's.
+The same command that runs the server runs its CLI: `sync` downloads, `status`
+reports what is present, and `uvx mcp-server-rfc <command> --help` covers the
+rest. It is also the command the server names in the error you get when
+full-text search is asked for without either.
 
-If a mirror already exists — synced for the companion skill, say — this server
+Both are optional. The server deliberately does not expose a sync tool: hundreds
+of megabytes on someone's disk should be a person's decision, not a model's.
+
+If an index or a mirror already exists — synced for the companion skill, say — this server
 picks it up automatically. It looks under the platform's data directory:
 `$XDG_DATA_HOME/rfc-ai-tooling`, or `%LOCALAPPDATA%\rfc-ai-tooling` on Windows,
 falling back to `~/.local/share/rfc-ai-tooling`. Set `$RFC_MIRROR` to point at a
@@ -98,10 +106,11 @@ instance of this server exists and none is planned** — if you want one, you ho
 it, and you should put authentication in front of it, since the server has none
 and would otherwise be an open proxy to a volunteer-run mirror.
 
-Full-text search is the one thing that does not survive: it reads a local 512 MB
-corpus, so a hosted instance returns an error saying so instead of silently
-answering a title search. The obsolescence banner, section reads and the
-unscoped-read guard all work, because they need only the 2 MB index.
+Full-text search works hosted only where the section index is on the
+server's disk (`sync --index` there). Without it, a hosted instance returns an
+error saying so instead of silently answering a title search. The obsolescence
+banner, section reads and the unscoped-read guard work either way, because they
+need only the 2 MB RFC index.
 
 ## If your client has a shell
 
