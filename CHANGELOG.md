@@ -8,7 +8,7 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
-## Unreleased
+## 0.6.0 — 2026-10-24
 
 ### Breaking
 
@@ -41,6 +41,7 @@ code announces that something used to work differently.
 - A search that could not use a present index, because it is of another
   format or this Python's SQLite lacks FTS5, answers from the mirror and says so
   in `note`.
+
 ### Fixed
 
 - On Windows, two tool calls refreshing the RFC index at the same moment no
