@@ -1,6 +1,7 @@
 # mcp-server-rfc
 
-An MCP server for looking up IETF RFCs.
+An MCP server that reads the RFC corpus with 40x fewer tokens and flags
+obsoleted specs.
 
 <!-- mcp-name: io.github.shbernal/rfc-ai-tooling -->
 

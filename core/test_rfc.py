@@ -401,23 +401,28 @@ def test_default_mirror_is_not_a_cache_directory(monkeypatch):
     assert ".cache" not in str(rfc.resolve_mirror(None))
 
 
+# An absolute root on whichever OS runs the suite: `/` or the drive, `C:\`.
+ROOT = Path(os.path.abspath(os.sep))
+
+
 def pretend_platform(monkeypatch, name):
     """Give rfc a view of `os` reporting a chosen os.name.
 
     Patching os.name itself would make Path() build a WindowsPath, which a
     POSIX host cannot instantiate, so only rfc's own reference moves. Paths in
-    these tests stay POSIX-shaped for the same reason: os.path.isabs answers
-    for the host, so a real `C:\\...` would read as relative here and prove
-    nothing. What is under test is which variable gets read.
+    these tests are built on ROOT for the same reason: os.path.isabs answers
+    for the host, so `/data` is relative on Windows and `C:\\data` on POSIX,
+    and either would prove nothing there. What is under test is which variable
+    gets read.
     """
     monkeypatch.setattr(rfc, "os", SimpleNamespace(name=name, environ=os.environ, path=os.path))
 
 
 def test_default_mirror_honours_the_data_directory_variable(monkeypatch):
     monkeypatch.delenv("RFC_MIRROR", raising=False)
-    monkeypatch.setenv("XDG_DATA_HOME", "/data")
+    monkeypatch.setenv("XDG_DATA_HOME", str(ROOT / "data"))
     pretend_platform(monkeypatch, "posix")
-    assert rfc.resolve_mirror(None) == Path("/data/rfc-ai-tooling")
+    assert rfc.resolve_mirror(None) == ROOT / "data" / "rfc-ai-tooling"
 
 
 def test_default_mirror_ignores_a_relative_data_directory(monkeypatch):
@@ -432,19 +437,19 @@ def test_default_mirror_ignores_a_relative_data_directory(monkeypatch):
 def test_default_mirror_uses_the_local_profile_on_windows(monkeypatch):
     """Never the roaming profile: it syncs to a domain controller at logon."""
     monkeypatch.delenv("RFC_MIRROR", raising=False)
-    monkeypatch.setenv("APPDATA", "/roaming")
-    monkeypatch.setenv("LOCALAPPDATA", "/local")
+    monkeypatch.setenv("APPDATA", str(ROOT / "roaming"))
+    monkeypatch.setenv("LOCALAPPDATA", str(ROOT / "local"))
     pretend_platform(monkeypatch, "nt")
-    assert rfc.resolve_mirror(None) == Path("/local/rfc-ai-tooling")
+    assert rfc.resolve_mirror(None) == ROOT / "local" / "rfc-ai-tooling"
 
 
 def test_default_mirror_ignores_the_data_directory_variable_on_windows(monkeypatch):
     """XDG_DATA_HOME is a POSIX convention; a stray one must not win there."""
     monkeypatch.delenv("RFC_MIRROR", raising=False)
-    monkeypatch.setenv("XDG_DATA_HOME", "/xdg")
-    monkeypatch.setenv("LOCALAPPDATA", "/local")
+    monkeypatch.setenv("XDG_DATA_HOME", str(ROOT / "xdg"))
+    monkeypatch.setenv("LOCALAPPDATA", str(ROOT / "local"))
     pretend_platform(monkeypatch, "nt")
-    assert rfc.resolve_mirror(None) == Path("/local/rfc-ai-tooling")
+    assert rfc.resolve_mirror(None) == ROOT / "local" / "rfc-ai-tooling"
 
 
 def test_an_explicit_mirror_needs_no_home_directory(monkeypatch):

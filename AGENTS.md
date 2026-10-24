@@ -52,7 +52,8 @@ required. `make test RUN=` calls the bare commands instead, for an environment
 you manage yourself.
 
 Both smoke targets hit the network, so neither is in `make test`. They answer
-different questions and CI runs `smoke-local` on every pull request:
+different questions. CI runs `smoke-local`'s session on Linux, macOS and Windows
+on every pull request:
 
 - **`make smoke-local`** drives the working tree, so it can run *before* the
   tag. That ordering is the point — `make smoke` can only test a version that

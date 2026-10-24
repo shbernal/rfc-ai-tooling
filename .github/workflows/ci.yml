@@ -1,4 +1,4 @@
-name: test
+name: ci
 
 on:
   push:
@@ -11,10 +11,13 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # The core touches the filesystem (mirror paths, SQLite, subprocess), and
+    # each of those is where Windows and macOS differ from Linux.
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python: ["3.10", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v7
@@ -68,12 +71,24 @@ jobs:
     # call the tool functions directly; this is the only job that proves the
     # protocol layer between a client and them still works. It hits the RFC
     # Editor, which is why it is a job of its own and not part of `test`.
-    runs-on: ubuntu-latest
+    #
+    # It runs on every OS because stdio is the transport, and pipes, newlines
+    # and process spawning are exactly what Windows does differently.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
-      # No --with mcp --no-project wrapper: the recipe runs the server through
-      # `uv run` itself now, which syncs the dev group the SDK is declared in.
-      # Wrapping it would nest one uv run inside another with the opposite
-      # answer about whether this is a project.
-      - run: make smoke-local
+      # `make smoke-local` spelled out, because Windows runners have neither
+      # make nor python3. Only the server goes through a project `uv run`,
+      # which syncs the dev group the SDK is declared in; smoke.py is
+      # stdlib-only, so it runs --no-project rather than nesting one project
+      # run inside another.
+      - shell: bash
+        run: >-
+          PYTHONPATH=mcp/src uv run --no-project python mcp/smoke.py
+          --expect-version "$(uv version --short --project mcp)"
+          -- uv run python -m mcp_server_rfc.server

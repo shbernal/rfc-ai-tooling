@@ -14,10 +14,10 @@ on:
         default: testpypi
 
 jobs:
-  # Tag pushes do not match test.yml's `branches: [main]` filter, so without
+  # Tag pushes do not match ci.yml's `branches: [main]` filter, so without
   # this the release ref would be published with nothing verified on it.
   verify:
-    uses: ./.github/workflows/test.yml
+    uses: ./.github/workflows/ci.yml
 
   publish-mcp:
     needs: verify
