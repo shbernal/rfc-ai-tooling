@@ -42,6 +42,16 @@ code announces that something used to work differently.
   format or this Python's SQLite lacks FTS5, answers from the mirror and says so
   in `note`.
 
+## 0.5.2 — 2026-10-24
+
+### Added
+
+- **Listed in the MCP Registry** as `io.github.shbernal/rfc-ai-tooling`.
+  `mcp/server.json` describes the server, and the `mcp-name` line in
+  `mcp/README.md` proves to the registry that the PyPI package is ours. A tag
+  push now publishes the listing after the package. No code changes;
+  `mcp-server-rfc` 0.5.2 is the same server as 0.5.1.
+
 ## 0.5.1 — 2026-10-05
 
 ### Fixed

@@ -44,6 +44,12 @@ jobs:
             exit 1
           fi
           echo "tag $GITHUB_REF_NAME matches packaged version $packaged"
+          for listed in $(jq -r '.version, .packages[].version' mcp/server.json); do
+            if [ "$tag" != "$listed" ]; then
+              echo "::error::tag $GITHUB_REF_NAME implies $tag, but mcp/server.json declares $listed"
+              exit 1
+            fi
+          done
 
       - run: uv build
         working-directory: mcp
@@ -60,6 +66,57 @@ jobs:
         if: inputs.repository != 'testpypi'
         run: uv publish --check-url https://pypi.org/simple/
         working-directory: mcp
+
+  # The registry verifies ownership by reading the mcp-name line out of the
+  # package's PyPI description, so this can only run once that version is on
+  # PyPI, and only for real tags — a TestPyPI dispatch has nothing to list.
+  publish-registry:
+    needs: publish-mcp
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      SERVER_NAME: io.github.shbernal/rfc-ai-tooling
+      PUBLISHER_VERSION: v1.8.4
+    steps:
+      - uses: actions/checkout@v7
+
+      # The registry refuses to re-publish a version, so a re-run of the
+      # release would fail here without this check.
+      - name: Check whether this version is already listed
+        id: existing
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            "https://registry.modelcontextprotocol.io/v0/servers/${SERVER_NAME/\//%2F}/versions/$version")
+          if [ "$status" = 200 ]; then
+            echo "listed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$SERVER_NAME@$version is already listed; skipping"
+          else
+            echo "listed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install mcp-publisher
+        if: steps.existing.outputs.listed == 'false'
+        run: |
+          curl -sL "https://github.com/modelcontextprotocol/registry/releases/download/$PUBLISHER_VERSION/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz mcp-publisher
+
+      # PyPI's JSON API can lag the upload by a minute or two, and until it
+      # serves the new version the registry rejects the package as missing.
+      - name: Publish to the MCP Registry
+        if: steps.existing.outputs.listed == 'false'
+        working-directory: mcp
+        run: |
+          ../mcp-publisher login github-oidc
+          for attempt in 1 2 3 4 5; do
+            ../mcp-publisher publish && exit 0
+            echo "attempt $attempt failed; retrying in 60s"
+            sleep 60
+          done
+          exit 1
 
   publish-skill:
     needs: verify

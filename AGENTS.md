@@ -123,10 +123,16 @@ affected. The publish workflow is idempotent on both halves, so re-running it at
 an already-published version skips rather than fails.
 
 The two halves fire on different events. Pushing a `v*` tag publishes
-`mcp-server-rfc` to PyPI and nothing else; the skill goes to ClawHub only when
-a GitHub release is created for that tag (`gh release create vX.Y.Z
---verify-tag`). A release is not done until both have run. ClawHub then holds
-the new version for security scans before it becomes public.
+`mcp-server-rfc` to PyPI, then lists that version in the MCP Registry as
+`io.github.shbernal/rfc-ai-tooling` from `mcp/server.json`; the skill goes to
+ClawHub only when a GitHub release is created for that tag (`gh release create
+vX.Y.Z --verify-tag`). A release is not done until both have run. ClawHub then
+holds the new version for security scans before it becomes public.
+
+`mcp/server.json` carries the version twice, and both must match the tag or
+the publish job fails before uploading anything. The registry verifies the
+package through the `mcp-name` comment in `mcp/README.md`; removing it breaks
+every later listing.
 
 ### Breaking changes are welcome
 
