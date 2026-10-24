@@ -398,6 +398,26 @@ def _fetch(
         raise RFCError(f"network error fetching {url}: {exc.reason}") from exc
 
 
+def _replace(src: Path, dst: Path) -> None:
+    """os.replace, retried briefly on Windows.
+
+    Windows will not replace a file while another handle has it open, and that
+    includes a second writer's rename landing on the same path. Two worker
+    threads refreshing the index at once, which POSIX settles silently, fail
+    there with PermissionError. Both handles are short-lived, so waiting a few
+    milliseconds and trying again is enough.
+    """
+    for delay in (0.01, 0.02, 0.05, 0.1, 0.2, 0.5):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if os.name != "nt":
+                raise
+            time.sleep(delay)
+    os.replace(src, dst)
+
+
 def _write_atomically(path: Path, data: bytes) -> None:
     """Write through a sibling temporary file and rename it into place.
 
@@ -417,7 +437,7 @@ def _write_atomically(path: Path, data: bytes) -> None:
     tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.part")
     try:
         tmp.write_bytes(data)
-        os.replace(tmp, path)
+        _replace(tmp, path)
     except BaseException:
         with contextlib.suppress(OSError):
             tmp.unlink()

@@ -41,6 +41,12 @@ code announces that something used to work differently.
 - A search that could not use a present index, because it is of another
   format or this Python's SQLite lacks FTS5, answers from the mirror and says so
   in `note`.
+### Fixed
+
+- On Windows, two tool calls refreshing the RFC index at the same moment no
+  longer fail one of them with `PermissionError`. Windows refuses to rename a
+  file over one another writer is replacing, so the write now retries for up
+  to a second there.
 
 ## 0.5.2 — 2026-10-24
 
