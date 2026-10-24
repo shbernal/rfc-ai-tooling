@@ -1645,6 +1645,14 @@ def test_status_reports_the_section_index(built, monkeypatch, capsys):
     assert status["section_index"]["documents"] == "5"
 
 
+def test_the_human_status_counts_the_section_index_as_full_text(built, monkeypatch, capsys):
+    _drop_mirror(built)
+    monkeypatch.setenv("RFC_MIRROR", str(built))
+    assert rfc.main(["status"]) == 0
+    mode = capsys.readouterr().out.splitlines()[0]
+    assert mode == "mode: online (full-text search available)"
+
+
 def test_the_human_output_names_the_section(built, monkeypatch, capsys):
     monkeypatch.setenv("RFC_MIRROR", str(built))
     assert rfc.main(["search", "widget", "--fulltext"]) == 0

@@ -1816,10 +1816,13 @@ def cmd_status(args: argparse.Namespace) -> int:
     docs = count_documents(mirror)
     populated = path.exists() and ((mirror / SYNC_STAMP).exists() or docs > POPULATED_THRESHOLD)
 
+    section_index = _section_index_status(section_index_path(mirror))
+    searchable = populated or section_index.get("usable", False)
+
     index_info: dict = {"present": path.exists(), "path": str(path)}
     lines = [
         f"mode: {'offline' if populated else 'online'}"
-        f" ({'full-text search available' if populated else 'title search only'})",
+        f" ({'full-text search available' if searchable else 'title search only'})",
         f"mirror: {mirror} ({docs} document{'s' if docs != 1 else ''})",
     ]
     if path.exists():
@@ -1835,9 +1838,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         lines.append(f"index: {path} ({entries} entries, {_describe_age(age)})")
     else:
         lines.append(f"index: not present (will be fetched on first use) — {path}")
-    section_index = _section_index_status(section_index_path(mirror))
     lines.append(section_index.pop("line"))
-    searchable = populated or section_index.get("usable", False)
     if not searchable:
         lines.append(
             f"run `{invocation()} sync --index` for ranked full-text search, or "
