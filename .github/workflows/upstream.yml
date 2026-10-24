@@ -17,7 +17,7 @@ jobs:
       - uses: astral-sh/setup-uv@v10.2.0
 
       - name: Index and documents still parse
-        # --with mcp for the same reason test.yml needs it: pytest imports every
+        # --with mcp for the same reason ci.yml needs it: pytest imports every
         # module under testpaths before -m deselects anything, and without the
         # SDK installed `import mcp` resolves to this repo's mcp/ directory as an
         # empty namespace package.
