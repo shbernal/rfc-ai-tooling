@@ -2,6 +2,8 @@
 
 An MCP server for looking up IETF RFCs.
 
+<!-- mcp-name: io.github.shbernal/rfc-ai-tooling -->
+
 ```json
 {
   "mcpServers": {
