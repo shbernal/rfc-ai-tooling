@@ -471,6 +471,20 @@ def test_an_unknown_log_level_is_ignored_with_a_warning(monkeypatch, caplog):
     assert "RFC_LOG_LEVEL='verbose'" in caplog.text
 
 
+def test_a_deployment_names_the_command_its_errors_give(monkeypatch):
+    """In a container, `uvx` on the host syncs a disk the server cannot read."""
+    command = "docker run --rm -it -v rfc-mirror:/mirror mcp/rfc-lookup mcp-server-rfc"
+    monkeypatch.setenv("RFC_CLI", command)
+    try:
+        importlib.reload(server)
+        message = rfc.fulltext_unavailable_message(retry_hint="Retry")
+        assert f"`{command} sync --index`" in message
+    finally:
+        monkeypatch.delenv("RFC_CLI")
+        importlib.reload(server)
+    assert rfc.CLI_NAME == "uvx mcp-server-rfc"
+
+
 # --------------------------------------------------------------------------
 # The entry point
 # --------------------------------------------------------------------------

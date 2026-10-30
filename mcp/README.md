@@ -92,6 +92,18 @@ falling back to `~/.local/share/rfc-ai-tooling`. Set `$RFC_MIRROR` to point at a
 non-default location — in a container with no home directory, that or `--mirror`
 is what to pass.
 
+In a container, `uvx` on the host would write to the wrong disk. Keep the mirror
+in a named volume, fill it through the image, and set `$RFC_CLI` so the server's
+errors name that command instead of `uvx mcp-server-rfc`:
+
+```bash
+docker build -t mcp-server-rfc mcp/
+docker run --rm -it -v rfc-mirror:/mirror mcp-server-rfc mcp-server-rfc sync --index
+docker run --rm -i -v rfc-mirror:/mirror -e RFC_TRANSPORT=stdio \
+  -e RFC_CLI="docker run --rm -it -v rfc-mirror:/mirror mcp-server-rfc mcp-server-rfc" \
+  mcp-server-rfc
+```
+
 ## HTTP mode
 
 The config above is the stdio transport, which needs a client that can spawn a

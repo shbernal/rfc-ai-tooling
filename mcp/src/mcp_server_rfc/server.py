@@ -51,7 +51,11 @@ if not isinstance(_level, int):
 # indistinguishable from an installed one: the package imports, and uv puts its
 # bin directory on PATH for the child. The knowledge lives here, in the package
 # that knows how it is distributed, or nowhere.
-CLI = "uvx mcp-server-rfc"
+#
+# A container is the exception, because there the shell that would run `uvx`
+# writes to the host's disk and not to the mirror the server reads. Whoever
+# deploys the image knows its name and its volume, so RFC_CLI is theirs to set.
+CLI = os.environ.get("RFC_CLI") or "uvx mcp-server-rfc"
 rfc.CLI_NAME = CLI
 
 server = MCPServer(
