@@ -8,6 +8,17 @@ Breaking changes are removals, not deprecations: the old behaviour goes, the
 version bumps, and this file is where the change is recorded. Nothing in the
 code announces that something used to work differently.
 
+## 0.6.1 — 2026-10-30
+
+### Added
+
+- **`RFC_CLI`** sets the command the server's errors tell the user to run, for
+  a deployment where `uvx mcp-server-rfc` would not reach the server's mirror.
+- **The Docker image can hold the corpus.** It now includes `rsync`, and its
+  mirror is `/mirror`, owned by the server's user, so `sync` and `sync --index`
+  can fill a named volume mounted there. `RFC_MIRROR` used to be
+  `/tmp/rfc-mirror`. `fly.toml` still sets that path itself.
+
 ## 0.6.0 — 2026-10-24
 
 ### Breaking
