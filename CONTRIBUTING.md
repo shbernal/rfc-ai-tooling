@@ -44,3 +44,9 @@ They work in a fresh shell with no venv activated.
 Breaking changes are removals, not deprecations.
 The old behaviour goes and the version bumps, with no compatibility shim and no runtime notice.
 Record each one in [`CHANGELOG.md`](CHANGELOG.md) under the version that made it.
+
+## Commits and pull requests
+
+Commit messages carry no AI attribution: no `Co-authored-by:` trailer for a tool and no "Generated with" line.
+CI enforces it with the `commit-check` job.
+State AI involvement in the pull request description instead, on the `AI disclosure:` line of the template.
