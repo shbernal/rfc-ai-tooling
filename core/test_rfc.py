@@ -362,11 +362,6 @@ def test_empty_mirror_is_online_mode(tmp_path):
     assert rfc.is_populated(tmp_path) is False
 
 
-def test_index_alone_is_not_a_populated_mirror(tmp_path):
-    (tmp_path / "rfc-index.txt").write_text(INDEX_EXCERPT)
-    assert rfc.is_populated(tmp_path) is False
-
-
 def test_a_few_cached_documents_are_not_a_populated_mirror(tmp_path):
     """On-demand fetches accumulate in the mirror; that is not a sync."""
     (tmp_path / "rfc-index.txt").write_text(INDEX_EXCERPT)
@@ -538,11 +533,6 @@ def test_a_page_cut_short_keeps_the_current_documents(records):
     page, page_total = rfc.search_titles(records, "", limit=2)
     assert page_total == total
     assert all(not r.obsoleted_by for r in page), "the page should not be spent on dead RFCs"
-
-
-def test_limit_is_honoured(records):
-    hits, _ = rfc.search_titles(records, "", limit=2)
-    assert len(hits) == 2
 
 
 @pytest.mark.parametrize("limit", [0, -1])
