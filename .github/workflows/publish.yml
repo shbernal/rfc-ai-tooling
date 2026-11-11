@@ -29,7 +29,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
 
       # The tag is the only thing a human types at release time, and nothing
       # else ties it to what actually gets uploaded: tagging v0.2.0 without
@@ -79,7 +79,7 @@ jobs:
       contents: read
     env:
       SERVER_NAME: io.github.shbernal/rfc-ai-tooling
-      PUBLISHER_VERSION: v1.8.4
+      PUBLISHER_VERSION: v1.8.9
     steps:
       - uses: actions/checkout@v7
 
@@ -154,13 +154,13 @@ jobs:
       - uses: actions/setup-node@v7
         if: steps.diff.outputs.changed == 'true'
         with:
-          node-version: "22"
+          node-version: "24"
 
       # Pinned; clawhub has no OIDC trusted-publishing path, so auth is a
       # long-lived token (CLAWHUB_TOKEN) rather than id-token: write.
       - name: Install clawhub
         if: steps.diff.outputs.changed == 'true'
-        run: npm install -g clawhub@0.23.3
+        run: npm install -g clawhub@0.25.1
 
       - name: Authenticate to ClawHub
         if: steps.diff.outputs.changed == 'true'
