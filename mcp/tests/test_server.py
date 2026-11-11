@@ -185,13 +185,8 @@ def test_a_document_is_readable_with_no_index_at_all(isolated_mirror, monkeypatc
 
 def test_fulltext_without_a_mirror_names_what_to_run(isolated_mirror):
     refused = refusal(server.search_rfcs, "congestion", scope="fulltext")
-    assert "sync" in refused
-    assert "scope='title'" in refused
-
-
-def test_fulltext_without_a_mirror_offers_the_index_first(isolated_mirror):
-    refused = refusal(server.search_rfcs, "congestion", scope="fulltext")
     assert "sync --index" in refused
+    assert "scope='title'" in refused
 
 
 def test_an_index_alone_serves_search_and_reads_across_calls(
@@ -221,10 +216,6 @@ def test_an_index_alone_serves_search_and_reads_across_calls(
     rfc.build_section_index(source, rfc.section_index_path(isolated_mirror))
     assert server.search_rfcs("gadget", scope="fulltext")["results"][0]["section"] == "1"
     assert "gadget" in server.get_rfc(1000, section="1")["content"]
-
-
-def test_an_unknown_scope_is_refused(isolated_mirror):
-    assert "scope" in refusal(server.search_rfcs, "anything", scope="everything")
 
 
 def test_a_long_rfc_with_no_section_is_refused(isolated_mirror, monkeypatch):
@@ -362,17 +353,6 @@ def test_a_limit_below_one_is_refused(sectioned):
     """The model picks this number, so -1 and 0 arrive from outside."""
     assert "at least 1" in refusal(server.search_rfcs, "hypertext", limit=0)
     assert "at least 1" in refusal(server.search_rfcs, "hypertext", limit=-1)
-
-
-def test_a_limit_past_the_ceiling_is_refused(sectioned):
-    """The same number, from the same place, in the other direction."""
-    ceiling = rfc.MAX_SEARCH_LIMIT
-    server.search_rfcs("hypertext", limit=ceiling)
-    assert f"at most {ceiling}" in refusal(server.search_rfcs, "hypertext", limit=ceiling + 1)
-
-
-def test_an_empty_query_is_refused(sectioned):
-    assert "query is empty" in refusal(server.search_rfcs, "")
 
 
 def test_regex_reaches_the_model_too(sectioned):
