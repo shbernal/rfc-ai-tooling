@@ -104,3 +104,15 @@ jobs:
           PYTHONPATH=mcp/src uv run --no-project python mcp/smoke.py
           --expect-version "$(uv version --short --project mcp)"
           -- uv run python -m mcp_server_rfc.server
+
+  ci-ok:
+    # The one check the main ruleset requires. The matrix job names (`test
+    # (os, python)`, `smoke (os)`) change whenever the matrix moves, and a
+    # stale required name blocks every merge, so they are gated here instead.
+    if: always()
+    needs: [test, commit-check, lint, typecheck, vendor, build, smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
